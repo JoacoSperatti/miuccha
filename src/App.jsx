@@ -17,29 +17,41 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
   const total = cart.reduce((acc, item) => acc + item.precio, 0);
 
   const finalizarCompra = async () => {
-    if (cart.length === 0) return;
-    try {
-      for (const item of cart) {
-        const productoRef = doc(db, "productos", item.id);
-        await updateDoc(productoRef, {
-          [`stock.${item.talle}`]: increment(-1)
-        });
-      }
+  if (cart.length === 0) return;
+  try {
+    // 1. Obtener/Incrementar el número de orden (Usamos un doc "metadata" en Firebase)
+    const metaRef = doc(db, "metadata", "orders");
+    // Nota: Si es la primera vez, asegurate de crear este doc en la consola con { count: 0 }
+    await updateDoc(metaRef, { count: increment(1) });
+    
+    // Recuperamos el número actualizado para mostrarlo
+    const { getDoc } = await import("firebase/firestore");
+    const metaSnap = await getDoc(metaRef);
+    const orderNumber = metaSnap.data().count;
 
-      const productosTxt = cart.map(item => `- ${item.nombre} (Talle: ${item.talle})`).join('%0A');
-      const datosPago = "ALIAS: pagos.miuccha%0ACBU: 0000003100012345678901%0ATitular: ELIAS";
-      const mensaje = `Hola Miuccha! 👋 Quiero realizar el siguiente pedido:%0A%0A${productosTxt}%0A%0A*Total: $${total.toLocaleString()}*%0A%0A📌 *DATOS PARA TRANSFERENCIA:*%0A${datosPago}%0A%0A(Envío el comprobante por acá ni bien realice el pago)`;
-
-      const whatsappUrl = `https://wa.me/5491165283561?text=${mensaje}`;
-      setCart([]);
-      onClose();
-      window.open(whatsappUrl, '_blank');
-    } catch (error) {
-      console.error("Error al procesar el pedido:", error);
-      alert("Error al actualizar el stock.");
+    // 2. Descontar stock
+    for (const item of cart) {
+      const productoRef = doc(db, "productos", item.id);
+      await updateDoc(productoRef, {
+        [`stock.${item.talle}`]: increment(-1)
+      });
     }
-  };
 
+    // 3. Armar mensaje con Nro de Compra
+    const productosTxt = cart.map(item => `- ${item.nombre} (Talle: ${item.talle})`).join('%0A');
+    const datosPago = "ALIAS: pagos.miuccha%0ACBU: 0000003100012345678901%0ATitular: NOMBRE";
+    
+    const mensaje = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*%0A%0AQuiero realizar el siguiente pedido:%0A%0A${productosTxt}%0A%0A*Total: $${total.toLocaleString()}*%0A%0A📌 *DATOS PARA TRANSFERENCIA:*%0A${datosPago}%0A%0A(Envío el comprobante por acá ni bien realice el pago)`;
+
+    const whatsappUrl = `https://wa.me/5491165283561?text=${mensaje}`;
+    setCart([]);
+    onClose();
+    window.open(whatsappUrl, '_blank');
+  } catch (error) {
+    console.error("Error al procesar el pedido:", error);
+    alert("Error al generar el número de orden o actualizar stock.");
+  }
+};
   return (
     <div className={`fixed inset-0 z-[200] ${isOpen ? "visible" : "invisible"}`}>
       <div className={`absolute inset-0 bg-black/40 transition-opacity duration-500 ${isOpen ? "opacity-100" : "opacity-0"}`} onClick={onClose}/>
@@ -71,7 +83,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
           <div className="p-8 bg-gray-50 space-y-4 border-t-2 border-white">
             <div className="bg-amber-50 border border-amber-200 p-4">
               <p className="text-[9px] font-bold text-amber-800 uppercase tracking-widest mb-1 font-sans">📌 Pago por Transferencia</p>
-              <p className="text-[10px] text-amber-900 font-sans">A nombre de <b>ELIAS</b>. Envianos el comprobante por WhatsApp para despachar.</p>
+              <p className="text-[10px] text-amber-900 font-sans">A nombre de <b>NOMBRE</b>. Envianos el comprobante por WhatsApp para despachar.</p>
             </div>
             <div className="flex justify-between items-center mb-4 font-sans">
               <span className="uppercase text-[10px] tracking-[0.3em] font-bold text-gray-500">Total</span>
