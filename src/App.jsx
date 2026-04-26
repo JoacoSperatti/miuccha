@@ -258,7 +258,7 @@ const Header = ({ cartCount, onCartClick }) => {
   return (
     <div className="fixed top-0 w-full z-50">
       <div className="bg-black text-white text-[9px] text-center py-2 uppercase tracking-[0.2em] px-2 font-bold font-sans">
-        Envío gratis | Solo transferencia y depósito | 100% Cuero
+        Envío gratis | Sólo transferencia y depósito | 100% Cuero
       </div>
       <nav
         className={`bg-white/95 backdrop-blur-md border-b border-gray-100 px-6 flex justify-between items-center transition-all duration-500 ${isScrolled ? "py-2" : "py-6"}`}
