@@ -6,6 +6,7 @@ import {
   Link,
   useNavigate,
   useSearchParams,
+  useLocation,
 } from "react-router-dom";
 import {
   FaInstagram,
@@ -45,11 +46,9 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
   const finalizarCompra = async () => {
     if (cart.length === 0) return;
     try {
-      // 1. Obtener/Incrementar el número de orden en la colección metadata/orders
       const metaRef = doc(db, "metadata", "orders");
       await updateDoc(metaRef, { count: increment(1) });
 
-      // Recuperamos el documento actualizado para obtener el número de orden
       const metaSnap = await getDoc(metaRef);
 
       if (!metaSnap.exists()) {
@@ -58,7 +57,6 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
 
       const orderNumber = metaSnap.data().count;
 
-      // 2. Descontar stock por talle para cada producto en el carrito
       for (const item of cart) {
         const productoRef = doc(db, "productos", item.id);
         await updateDoc(productoRef, {
@@ -66,23 +64,18 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
         });
       }
 
-      // 3. Armar el texto de los productos
       const productosTxt = cart
-        .map((item) => `- ${item.nombre} (Talle: ${item.talle})`)
+        .map((item) => `- ${item.nombre} (Talle: ${item.talle}${item.color && item.color !== 'Único' ? `, Color: ${item.color}` : ''})`)
         .join("\n");
 
-      // 4. Configurar datos de transferencia
       const datosPago =
-        "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: NOMBRE";
+        "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: ELIAS";
 
-      // 5. Crear el mensaje final
       const mensajeCuerpo = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*\n\nQuiero realizar el siguiente pedido:\n\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n📌 *DATOS PARA TRANSFERENCIA:*\n${datosPago}\n\n(Envío el comprobante por acá ni bien realice el pago)`;
 
-      // 6. Codificar para URL y definir destino
       const mensajeCodificado = encodeURIComponent(mensajeCuerpo);
       const whatsappUrl = `https://wa.me/5491165283561?text=${mensajeCodificado}`;
 
-      // 7. Limpiar estado y redirigir (window.location es más compatible con móviles que window.open)
       setCart([]);
       onClose();
       window.location.href = whatsappUrl;
@@ -138,7 +131,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
                       {item.nombre}
                     </h4>
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mt-1">
-                      Talle: {item.talle}
+                      Talle: {item.talle} {item.color && item.color !== 'Único' ? `| Color: ${item.color}` : ''}
                     </p>
                   </div>
                   <div className="flex justify-between items-end">
@@ -166,7 +159,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
                 📌 Pago por Transferencia: pagos.miuccha
               </p>
               <p className="text-[10px] text-amber-900 font-sans">
-                A nombre de <b>NOMBRE</b>. Envianos el comprobante por WhatsApp
+                A nombre de <b>ELIAS</b>. Envianos el comprobante por WhatsApp
                 para despachar.
               </p>
             </div>
@@ -193,19 +186,42 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
 
 const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
   const [selectedSize, setSelectedSize] = useState(null);
-  const stockEntries = product.stock
-    ? Object.entries(product.stock).sort()
-    : [];
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [imgIndex, setImgIndex] = useState(0);
+  
+  const stockEntries = product.stock ? Object.entries(product.stock).sort() : [];
+  const coloresArray = Array.isArray(product.colores) ? product.colores : [];
+  const hasColors = coloresArray.length > 0;
+  const images = product.galeria && product.galeria.length > 0 ? [product.img, ...product.galeria] : [product.img];
+
+  const canAdd = selectedSize && (!hasColors || selectedColor);
+
+  const nextImg = (e) => {
+    e.stopPropagation();
+    setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  const prevImg = (e) => {
+    e.stopPropagation();
+    setImgIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
 
   return (
     <div className="group flex flex-col items-center text-center p-4">
-      <div className="relative overflow-hidden w-full aspect-[3/4] mb-4 bg-gray-100 shadow-sm">
+      <div className="relative overflow-hidden w-full aspect-[3/4] mb-4 bg-gray-100 shadow-sm group">
         <img
-          src={product.img}
+          src={images[imgIndex]}
           alt={product.nombre}
           className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
         />
+        {images.length > 1 && (
+          <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+            <button onClick={prevImg} className="bg-white/80 w-8 h-8 flex items-center justify-center rounded-full shadow hover:bg-white text-black font-bold">❮</button>
+            <button onClick={nextImg} className="bg-white/80 w-8 h-8 flex items-center justify-center rounded-full shadow hover:bg-white text-black font-bold">❯</button>
+          </div>
+        )}
       </div>
+      
       <h4 className="text-[9px] text-gray-400 uppercase tracking-widest mb-1 font-sans font-bold">
         {product.categoria}
       </h4>
@@ -215,6 +231,29 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
       <p className="font-bold text-gray-800 mb-4 tracking-tighter font-sans">
         ${product.precio?.toLocaleString()}
       </p>
+
+      {hasColors && (
+        <div className="flex flex-wrap justify-center gap-1 mb-3 font-sans">
+          {coloresArray.map((c) => (
+            <button
+              key={c}
+              onClick={() => setSelectedColor(c)}
+              className={`px-3 py-1 text-[9px] uppercase tracking-widest border transition-all ${
+                selectedColor === c ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-200 hover:border-black"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button
+        onClick={onOpenSizeGuide}
+        className="text-[9px] uppercase tracking-widest text-gray-400 mb-2 border-b border-transparent hover:border-gray-400 transition-all font-sans font-bold"
+      >
+        Ver Guía de Talles
+      </button>
 
       <div className="flex flex-wrap justify-center gap-2 mb-4 font-sans">
         {stockEntries.map(([talle, cant]) => (
@@ -233,13 +272,14 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
 
       <button
         onClick={() => {
-          onAddToCart({ ...product, talle: selectedSize });
+          onAddToCart({ ...product, talle: selectedSize, color: selectedColor || 'Único' });
           setSelectedSize(null);
+          setSelectedColor(null);
         }}
-        disabled={!selectedSize}
-        className={`w-full py-3 text-[10px] uppercase tracking-widest font-bold transition-all font-sans ${selectedSize ? "bg-black text-white hover:bg-gray-800 shadow-lg" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+        disabled={!canAdd}
+        className={`w-full py-3 text-[10px] uppercase tracking-widest font-bold transition-all font-sans ${canAdd ? "bg-black text-white hover:bg-gray-800 shadow-lg" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
       >
-        {selectedSize ? "Agregar al carrito" : "Seleccionar talle"}
+        {canAdd ? "Agregar al carrito" : (hasColors && !selectedColor ? "Seleccionar color y talle" : "Seleccionar talle")}
       </button>
     </div>
   );
@@ -247,7 +287,7 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
 
 const Header = ({ cartCount, onCartClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para el menú
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -274,7 +314,6 @@ const Header = ({ cartCount, onCartClick }) => {
             Información
           </a>
 
-          {/* BOTÓN HAMBURGUESA REAL */}
           <button
             onClick={() => setIsMenuOpen(true)}
             className="md:hidden text-black p-2"
@@ -311,7 +350,6 @@ const Header = ({ cartCount, onCartClick }) => {
         </div>
       </nav>
 
-      {/* PANEL DEL MENÚ MÓVIL */}
       <div
         className={`fixed inset-0 bg-white z-[100] transition-transform duration-500 flex flex-col p-10 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
@@ -349,24 +387,9 @@ const Header = ({ cartCount, onCartClick }) => {
 const CategoryGrid = () => {
   const navigate = useNavigate();
   const categories = [
-    {
-      id: 1,
-      name: "TEXANAS",
-      img: "/texanas.jpg",
-      link: "/catalogo?cat=TEXANAS",
-    },
-    {
-      id: 2,
-      name: "BOTAS",
-      img: "/botas.jpg",
-      link: "/catalogo?cat=BOTAS",
-    },
-    {
-      id: 3,
-      name: "BORCEGOS",
-      img: "/borcegos.jpg",
-      link: "/catalogo?cat=BORCEGOS",
-    },
+    { id: 1, name: "TEXANAS", img: "/texanas.jpg", link: "/catalogo?cat=TEXANAS" },
+    { id: 2, name: "BOTAS", img: "/botas.jpg", link: "/catalogo?cat=BOTAS" },
+    { id: 3, name: "BORCEGOS", img: "/borcegos.jpg", link: "/catalogo?cat=BORCEGOS" },
   ];
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 w-full shadow-2xl border-t-2 border-white">
@@ -387,10 +410,7 @@ const CategoryGrid = () => {
         </div>
       ))}
       <div
-        onClick={() => {
-          navigate("/catalogo");
-          window.scrollTo(0, 0);
-        }}
+        onClick={() => { navigate("/catalogo"); window.scrollTo(0, 0); }}
         className="flex flex-col items-center justify-center p-10 bg-[#C37D8D] border-2 border-white h-[250px] md:h-[300px] text-center font-serif italic cursor-pointer hover:opacity-90 transition-opacity"
       >
         <h4 className="text-4xl md:text-6xl text-[#E3F285] uppercase tracking-tighter">
@@ -401,20 +421,10 @@ const CategoryGrid = () => {
   );
 };
 
-// Agregá Pagination y Navigation si no los tenías activos
-
 const HomeHero = () => {
   const slides = [
-    {
-      id: 1,
-      title: "COLECCIÓN 2026",
-      img: "/banner1.jpg",
-    },
-    {
-      id: 2,
-      title: "100% CUERO",
-      img: "/banner2.jpg",
-    },
+    { id: 1, title: "COLECCIÓN 2026", img: "/banner1.jpg" },
+    { id: 2, title: "100% CUERO", img: "/banner2.jpg" },
   ];
 
   return (
@@ -423,7 +433,7 @@ const HomeHero = () => {
         modules={[Autoplay, Pagination, Navigation]}
         autoplay={{ delay: 5000 }}
         pagination={{ clickable: true }}
-        navigation={true} // Flechas para desktop
+        navigation={true}
         loop={true}
         className="h-full w-full"
       >
@@ -450,8 +460,6 @@ const HomeHero = () => {
     </section>
   );
 };
-
-// --- VIEWS ---
 
 const Home = ({ onAddToCart, onOpenSizeGuide }) => {
   const [featured, setFeatured] = useState([]);
@@ -489,9 +497,7 @@ const Home = ({ onAddToCart, onOpenSizeGuide }) => {
           Favoritos de la temporada
         </p>
         {loading ? (
-          <p className="font-serif italic text-gray-400">
-            Cargando colección...
-          </p>
+          <p className="font-serif italic text-gray-400">Cargando colección...</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
             {featured.map((p) => (
@@ -553,9 +559,7 @@ const CatalogPage = ({ onAddToCart, onOpenSizeGuide }) => {
         ))}
       </div>
       {loading ? (
-        <p className="text-center italic font-serif text-gray-400">
-          Actualizando productos...
-        </p>
+        <p className="text-center italic font-serif text-gray-400">Actualizando productos...</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-24">
           {products.map((p) => (
@@ -578,13 +582,15 @@ const AdminPanel = () => {
   const [products, setProducts] = useState([]);
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false); // Estado para feedback visual
+  const [uploading, setUploading] = useState(false); 
   const [newProd, setNewProd] = useState({
     nombre: "",
     precio: "",
     categoria: "BOTAS",
     destacado: false,
     img: "",
+    colores: "",
+    galeria: [],
     stock: { 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0 },
   });
 
@@ -605,35 +611,100 @@ const AdminPanel = () => {
     setLoading(false);
   };
 
-  // Función para convertir archivo a Base64
-  const handleFileChange = (e, callback) => {
+  // Función interna para comprimir la imagen en Base64
+  const processImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 800; // Reducimos tamaño máximo para web y base de datos
+          
+          if (width > height && width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          } else if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Guardamos con compresión jpeg al 70%
+          resolve(canvas.toDataURL("image/jpeg", 0.7));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleSingleFile = async (e, callback) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (file.size > 1000000) { // Límite de ~1MB para no saturar Firestore
-      alert("La imagen es muy pesada. Intentá con una de menos de 1MB.");
-      return;
-    }
-
     setUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      callback(reader.result);
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
+    const base64 = await processImage(file);
+    callback(base64);
+    setUploading(false);
+    e.target.value = ""; // Resetea input para poder volver a usarlo
+  };
+
+  const handleMultipleFiles = async (e, callback) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setUploading(true);
+    
+    // Procesamos y comprimimos todas las imágenes
+    const promises = files.map(file => processImage(file));
+    const base64Array = await Promise.all(promises);
+    
+    callback(base64Array);
+    setUploading(false);
+    e.target.value = ""; // Resetea input
+  };
+
+  const handleDeleteImage = async (id, type, index = null) => {
+    const p = products.find(prod => prod.id === id);
+    if (!p) return;
+    
+    try {
+      if (type === 'main') {
+        if (p.galeria && p.galeria.length > 0) {
+          const newMain = p.galeria[0];
+          const newGal = p.galeria.slice(1);
+          await updateDoc(doc(db, "productos", id), { img: newMain, galeria: newGal });
+        } else {
+          await updateDoc(doc(db, "productos", id), { img: "" });
+        }
+      } else {
+        const newGal = p.galeria.filter((_, i) => i !== index);
+        await updateDoc(doc(db, "productos", id), { galeria: newGal });
+      }
+      fetchProducts();
+    } catch (e) {
+      console.error(e);
+      alert("Error al eliminar la imagen.");
+    }
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
+      const coloresArray = newProd.colores.split(",").map(c => c.trim()).filter(c => c !== "");
       await addDoc(collection(db, "productos"), {
         ...newProd,
+        colores: coloresArray,
         precio: parseInt(newProd.precio),
       });
       alert("¡Producto creado!");
       setNewProd({
-        nombre: "", precio: "", categoria: "BOTAS", destacado: false, img: "",
+        nombre: "", precio: "", categoria: "BOTAS", destacado: false, img: "", colores: "", galeria: [],
         stock: { 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0 },
       });
       fetchProducts();
@@ -681,17 +752,20 @@ const AdminPanel = () => {
           <option value="BOTAS">BOTAS</option>
           <option value="BORCEGOS">BORCEGOS</option>
         </select>
+        <input type="text" placeholder="Colores (ej: Negro, Marrón)" className="p-3 border text-sm" value={newProd.colores} onChange={(e) => setNewProd({ ...newProd, colores: e.target.value })} />
         
-        <div className="md:col-span-2 flex flex-col gap-2">
-          <input type="text" placeholder="URL Imagen" className="p-3 border text-sm w-full" value={newProd.img} onChange={(e) => setNewProd({ ...newProd, img: e.target.value })} />
-          <span className="text-[10px] font-bold text-gray-400">O CARGÁ DESDE EL DISPOSITIVO:</span>
-          <input type="file" accept="image/*" className="text-xs" onChange={(e) => handleFileChange(e, (base64) => setNewProd({...newProd, img: base64}))} />
+        <div className="md:col-span-2 flex flex-col gap-2 p-3 border bg-white">
+          <span className="text-[10px] font-bold text-gray-400 uppercase">Portada y Galería:</span>
+          <div className="flex gap-2">
+            <input type="file" accept="image/*" className="text-xs" onChange={(e) => handleSingleFile(e, (base64) => setNewProd({...newProd, img: base64}))} />
+            <input type="file" multiple accept="image/*" className="text-xs" onChange={(e) => handleMultipleFiles(e, (base64Array) => setNewProd({...newProd, galeria: base64Array}))} />
+          </div>
         </div>
 
         <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
           <input type="checkbox" checked={newProd.destacado} onChange={(e) => setNewProd({ ...newProd, destacado: e.target.checked })} /> Home
         </label>
-        
+
         <div className="col-span-full grid grid-cols-3 sm:grid-cols-6 gap-2 mt-4">
           {Object.keys(newProd.stock).map((talle) => (
             <div key={talle} className="flex flex-col gap-1">
@@ -701,7 +775,7 @@ const AdminPanel = () => {
           ))}
         </div>
         <button type="submit" disabled={uploading} className="col-span-full bg-black text-white py-4 uppercase text-[10px] tracking-widest font-bold disabled:bg-gray-400">
-          {uploading ? "Cargando imagen..." : "Guardar Producto"}
+          {uploading ? "Procesando Imágenes..." : "Guardar Producto"}
         </button>
       </form>
 
@@ -711,15 +785,41 @@ const AdminPanel = () => {
           <div key={p.id} className="p-6 border bg-white shadow-sm flex flex-col md:flex-row gap-6 relative">
             <button onClick={() => deleteProduct(p.id)} className="absolute top-4 right-4 text-red-500 font-bold p-2"><FaTimes size={14} /></button>
             
-            <div className="flex flex-col items-center gap-2">
-              <img src={p.img} className="w-32 h-40 object-cover border" alt="" />
-              <input type="file" accept="image/*" id={`file-${p.id}`} className="hidden" onChange={(e) => handleFileChange(e, (base64) => updateField(p.id, "img", base64))} />
-              <label htmlFor={`file-${p.id}`} className="text-[9px] bg-gray-100 px-2 py-1 cursor-pointer hover:bg-black hover:text-white transition-all font-bold uppercase">Cambiar Foto</label>
+            <div className="w-full md:w-1/3 flex flex-col gap-4">
+              {/* Gestor de Fotos del Producto */}
+              <div className="flex flex-wrap gap-2 p-2 border bg-gray-50 min-h-[100px]">
+                {/* Foto Portada */}
+                <div className="relative w-20 h-24 group">
+                  <img src={p.img} className="w-full h-full object-cover border" alt="Portada"/>
+                  <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] text-center font-bold">PORTADA</span>
+                  <button onClick={() => handleDeleteImage(p.id, 'main')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                </div>
+                {/* Galería */}
+                {(p.galeria || []).map((img, idx) => (
+                  <div key={idx} className="relative w-20 h-24 group">
+                    <img src={img} className="w-full h-full object-cover border" alt="Galeria"/>
+                    <button onClick={() => handleDeleteImage(p.id, 'galeria', idx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-1">
+                <input type="file" accept="image/*" id={`main-${p.id}`} className="hidden" onChange={(e) => handleSingleFile(e, (base64) => updateField(p.id, "img", base64))} />
+                <label htmlFor={`main-${p.id}`} className="text-[8px] bg-gray-100 py-2 text-center cursor-pointer hover:bg-black hover:text-white font-bold uppercase transition-all">
+                  {uploading ? "Cargando..." : "Cambiar Portada"}
+                </label>
+                
+                <input type="file" multiple accept="image/*" id={`gal-${p.id}`} className="hidden" onChange={(e) => handleMultipleFiles(e, (base64Arr) => updateField(p.id, "galeria", [...(p.galeria || []), ...base64Arr]))} />
+                <label htmlFor={`gal-${p.id}`} className="text-[8px] bg-gray-100 py-2 text-center cursor-pointer hover:bg-black hover:text-white font-bold uppercase transition-all">
+                  {uploading ? "Cargando..." : "Añadir Fotos"}
+                </label>
+              </div>
             </div>
 
             <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-4">
                 <input type="text" defaultValue={p.nombre} onBlur={(e) => updateField(p.id, "nombre", e.target.value)} className="w-full font-bold border-b outline-none" />
+                <input type="text" placeholder="Colores..." defaultValue={(p.colores || []).join(", ")} onBlur={(e) => updateField(p.id, "colores", e.target.value.split(",").map(c=>c.trim()).filter(c=>c!==""))} className="w-full border-b outline-none text-xs text-gray-500" />
                 <div className="flex gap-4">
                   <input type="number" defaultValue={p.precio} onBlur={(e) => updateField(p.id, "precio", e.target.value)} className="w-24 border-b outline-none text-sm font-bold" />
                   <label className="text-[10px] flex items-center gap-1 font-bold uppercase">
@@ -747,24 +847,10 @@ const SizeGuide = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="bg-white w-full max-w-lg p-8 relative z-10 shadow-2xl overflow-y-auto max-h-[90vh]">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-black"
-        >
-          <FaTimes size={20} />
-        </button>
-        <h2 className="font-serif text-2xl italic mb-6 border-b pb-2">
-          Guía de Talles
-        </h2>
-        <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-6 font-sans">
-          Medidas aproximadas de la plantilla interna
-        </p>
-
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-black"><FaTimes size={20} /></button>
+        <h2 className="font-serif text-2xl italic mb-6 border-b pb-2">Guía de Talles</h2>
         <table className="w-full text-left font-sans border-collapse">
           <thead>
             <tr className="border-b text-[10px] uppercase tracking-widest text-gray-400">
@@ -773,36 +859,17 @@ const SizeGuide = ({ isOpen, onClose }) => {
             </tr>
           </thead>
           <tbody className="text-sm">
-            {[
-              { t: "35", cm: "22.5" },
-              { t: "36", cm: "23.2" },
-              { t: "37", cm: "24.0" },
-              { t: "38", cm: "24.6" },
-              { t: "39", cm: "25.3" },
-              { t: "40", cm: "26.0" },
-              { t: "41", cm: "26.7" },
-              { t: "42", cm: "27.3" },
-              { t: "43", cm: "28.0" },
-            ].map((row) => (
-              <tr
-                key={row.t}
-                className="border-b hover:bg-gray-50 transition-colors"
-              >
+            {[ { t: "35", cm: "22.5" }, { t: "36", cm: "23.2" }, { t: "37", cm: "24.0" }, { t: "38", cm: "24.6" }, { t: "39", cm: "25.3" }, { t: "40", cm: "26.0" }, { t: "41", cm: "26.7" }, { t: "42", cm: "27.3" }, { t: "43", cm: "28.0" } ].map((row) => (
+              <tr key={row.t} className="border-b hover:bg-gray-50 transition-colors">
                 <td className="py-3 font-bold">Talle {row.t}</td>
                 <td className="py-3 text-right font-mono">{row.cm} cm</td>
               </tr>
             ))}
           </tbody>
         </table>
-
-        <div className="mt-8 bg-gray-50 p-4 text-[11px] leading-relaxed text-gray-600">
-          <p className="font-bold mb-2 uppercase tracking-tighter text-black">
-            ¿Cómo medir tu pie?
-          </p>
-          <p>
-            Apoyá el pie sobre una hoja de papel, marcá el talón y el dedo más
-            largo. Medí la distancia y sumale 0.5 cm para mayor comodidad.
-          </p>
+        <div className="mt-8 bg-gray-50 p-4 text-[11px] leading-relaxed text-gray-600 font-sans">
+          <p className="font-bold mb-2 uppercase tracking-tighter text-black">¿Cómo medir tu pie?</p>
+          <p>Apoyá el pie sobre una hoja de papel, marcá el talón y el dedo más largo. Medí la distancia y sumale 0.5 cm para mayor comodidad.</p>
         </div>
       </div>
     </div>
@@ -811,172 +878,59 @@ const SizeGuide = ({ isOpen, onClose }) => {
 
 const PolicyPage = () => (
   <div className="pt-44 pb-24 px-6 max-w-3xl mx-auto font-sans leading-relaxed">
-    <h2 className="font-serif text-4xl italic mb-10 text-center">
-      Cambios y Devoluciones
-    </h2>
+    <h2 className="font-serif text-4xl italic mb-10 text-center">Cambios y Devoluciones</h2>
     <div className="space-y-8 text-gray-700 text-sm">
-      <section>
-        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
-          Plazos
-        </h3>
-        <p>
-          Los cambios se pueden realizar dentro de los 30 días corridos
-          posteriores a la compra.
-        </p>
-      </section>
-      <section>
-        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
-          Condiciones
-        </h3>
-        <p>
-          El producto debe estar sin uso, en su caja original y en las mismas
-          condiciones en que fue recibido. No se aceptarán cambios de productos
-          que presenten marcas de uso en la suela o cuero.
-        </p>
-      </section>
-      <section>
-        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
-          Logística
-        </h3>
-        <p>
-          Los costos de envío por cambios corren por cuenta del cliente, a
-          excepción de fallas de fabricación. En caso de falla, MIUCCHA se hace
-          cargo del retiro y reenvío.
-        </p>
-      </section>
-      <section>
-        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
-          Procedimiento
-        </h3>
-        <p>
-          Escribinos a nuestro WhatsApp indicando tu <b>Nro de Orden (#)</b> y
-          el motivo del cambio. Te responderemos a la brevedad con los pasos a
-          seguir.
-        </p>
-      </section>
+      <section><h3 className="font-bold uppercase tracking-widest text-black mb-2">Plazos</h3><p>Los cambios se pueden realizar dentro de los 30 días corridos posteriores a la compra.</p></section>
+      <section><h3 className="font-bold uppercase tracking-widest text-black mb-2">Condiciones</h3><p>El producto debe estar sin uso, en su caja original y en las mismas condiciones en que fue recibido.</p></section>
+      <section><h3 className="font-bold uppercase tracking-widest text-black mb-2">Procedimiento</h3><p>Escribinos a nuestro WhatsApp indicando tu <b>Nro de Orden (#)</b> y el motivo del cambio.</p></section>
     </div>
   </div>
 );
 
-// En el Routes de App.jsx:
-// <Route path="/cambios" element={<PolicyPage />} />
-
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 };
-
-// --- APP PRINCIPAL ---
 
 export default function App() {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false); // Estado para el modal
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
-  const addToCart = (p) => {
-    setCart([...cart, p]);
-    setIsCartOpen(true);
-  };
+  const addToCart = (p) => { setCart([...cart, p]); setIsCartOpen(true); };
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="bg-white min-h-screen text-gray-900 flex flex-col selection:bg-black selection:text-white">
-        <Header
-          cartCount={cart.length}
-          onCartClick={() => setIsCartOpen(true)}
-        />
-        <CartDrawer
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          cart={cart}
-          setCart={setCart}
-        />
-
-        {/* AGREGAMOS EL MODAL AQUÍ */}
-        <SizeGuide
-          isOpen={isSizeGuideOpen}
-          onClose={() => setIsSizeGuideOpen(false)}
-        />
+        <Header cartCount={cart.length} onCartClick={() => setIsCartOpen(true)} />
+        <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} setCart={setCart} />
+        <SizeGuide isOpen={isSizeGuideOpen} onClose={() => setIsSizeGuideOpen(false)} />
 
         <main className="flex-grow">
           <Routes>
-            <Route
-              path="/"
-              element={
-                <Home
-                  onAddToCart={addToCart}
-                  onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
-                />
-              }
-            />
-            <Route
-              path="/catalogo"
-              element={
-                <CatalogPage
-                  onAddToCart={addToCart}
-                  onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
-                />
-              }
-            />
+            <Route path="/" element={<Home onAddToCart={addToCart} onOpenSizeGuide={() => setIsSizeGuideOpen(true)} />} />
+            <Route path="/catalogo" element={<CatalogPage onAddToCart={addToCart} onOpenSizeGuide={() => setIsSizeGuideOpen(true)} />} />
             <Route path="/gestion-interna" element={<AdminPanel />} />
-            {/* RUTA PARA CAMBIOS */}
             <Route path="/cambios" element={<PolicyPage />} />
           </Routes>
         </main>
 
         <footer id="informacion" className="bg-gray-50 py-20 px-6 border-t text-center space-y-8 font-sans">
-          <h4 className="font-serif text-3xl italic tracking-widest italic">
-            MIUCCHA
-          </h4>
-
-          {/* BOTONES DE POLÍTICAS Y TALLES */}
+          <h4 className="font-serif text-3xl italic tracking-widest italic">MIUCCHA</h4>
           <div className="flex flex-col gap-3 text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500">
-            <button
-              onClick={() => setIsSizeGuideOpen(true)}
-              className="hover:text-black transition-colors"
-            >
-              Guía de Talles
-            </button>
-            <Link to="/cambios" className="hover:text-black transition-colors">
-              Cambios y Devoluciones
-            </Link>
+            <button onClick={() => setIsSizeGuideOpen(true)} className="hover:text-black transition-colors">Guía de Talles</button>
+            <Link to="/cambios" className="hover:text-black transition-colors">Cambios y Devoluciones</Link>
           </div>
-
           <div className="flex justify-center gap-8 text-gray-400">
-            <a
-              href="https://www.instagram.com/miucchazapatos/"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-black transition-colors duration-300"
-            >
-              <FaInstagram size={24} />
-            </a>
-
-            <a
-              href="https://wa.me/5491165283561"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-black transition-colors duration-300"
-            >
-              <FaWhatsapp size={24} />
-            </a>
+            <a href="https://www.instagram.com/miucchazapatos/" target="_blank" rel="noreferrer" className="hover:text-black transition-colors duration-300"><FaInstagram size={24} /></a>
+            <a href="https://wa.me/5491165283561" target="_blank" rel="noreferrer" className="hover:text-black transition-colors duration-300"><FaWhatsapp size={24} /></a>
           </div>
-          <p className="text-[9px] text-gray-400 uppercase tracking-[0.4em] font-bold font-sans">
-            © 2026 MIUCCHA - Calzado de Autor
-          </p>
+          <p className="text-[9px] text-gray-400 uppercase tracking-[0.4em] font-bold font-sans">© 2026 MIUCCHA - Calzado de Autor</p>
         </footer>
 
-        <a
-          href="https://wa.me/5491165283561"
-          target="_blank"
-          rel="noreferrer"
-          className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform z-[150] flex items-center justify-center"
-        >
-          <FaWhatsapp size={24} />
-        </a>
+        <a href="https://wa.me/5491165283561" target="_blank" rel="noreferrer" className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform z-[150] flex items-center justify-center"><FaWhatsapp size={24} /></a>
       </div>
     </Router>
   );
