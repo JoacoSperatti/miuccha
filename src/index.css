@@ -5,3 +5,10 @@
 html {
   scroll-behavior: smooth;
 }
+
+@media (max-width: 768px) {
+  .swiper-button-next,
+  .swiper-button-prev {
+    display: none !important;
+  }
+}
