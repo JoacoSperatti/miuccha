@@ -16,7 +16,7 @@ Bienvenido al repositorio oficial de **MIUCCHA**, una plataforma de e-commerce d
 * **Diseño Premium:** Header dinámico que se contrae al hacer scroll y estética minimalista.
 * **Gestión de Stock "Cuackstore":** Control preciso de stock por talle con descuento automático al confirmar el pedido.
 * **Flujo de Compra por WhatsApp:** Carrito de compras que genera una **Orden de Compra única (#)** y envía el detalle listo para el vendedor.
-* **Panel Administrativo:** Sección de gestión interna (`/gestion-interna`) protegida para carga de productos, edición de precios y ajuste de stock.
+* **Panel Administrativo:** Sección de gestión interna protegida para carga de productos, edición de precios y ajuste de stock.
 * **Catálogo Dinámico:** Filtrado por categorías (Texanas, Botas, Borcegos, Discontinuos) y etiquetas de "Destacados".
 * **Responsive:** Optimizado para dispositivos móviles y escritorio.
 
