@@ -73,14 +73,14 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
 
       // 4. Configurar datos de transferencia
       const datosPago =
-        "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: ELIAS";
+        "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: NOMBRE";
 
       // 5. Crear el mensaje final
       const mensajeCuerpo = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*\n\nQuiero realizar el siguiente pedido:\n\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n📌 *DATOS PARA TRANSFERENCIA:*\n${datosPago}\n\n(Envío el comprobante por acá ni bien realice el pago)`;
 
       // 6. Codificar para URL y definir destino
       const mensajeCodificado = encodeURIComponent(mensajeCuerpo);
-      const whatsappUrl = `https://wa.me/5491131608396?text=${mensajeCodificado}`;
+      const whatsappUrl = `https://wa.me/5491165283561?text=${mensajeCodificado}`;
 
       // 7. Limpiar estado y redirigir (window.location es más compatible con móviles que window.open)
       setCart([]);
@@ -166,7 +166,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
                 📌 Pago por Transferencia: pagos.miuccha
               </p>
               <p className="text-[10px] text-amber-900 font-sans">
-                A nombre de <b>ELIAS</b>. Envianos el comprobante por WhatsApp
+                A nombre de <b>NOMBRE</b>. Envianos el comprobante por WhatsApp
                 para despachar.
               </p>
             </div>
