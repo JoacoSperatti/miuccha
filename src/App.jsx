@@ -267,12 +267,12 @@ const Header = ({ cartCount, onCartClick }) => {
           <Link to="/" className="hover:text-black hidden md:block transition">
             Inicio
           </Link>
-          <Link
-            to="/catalogo"
+          <a
+            href="#informacion"
             className="hover:text-black hidden md:block transition"
           >
-            Catálogo
-          </Link>
+            Información
+          </a>
 
           {/* BOTÓN HAMBURGUESA REAL */}
           <button
@@ -325,9 +325,9 @@ const Header = ({ cartCount, onCartClick }) => {
           <Link to="/" onClick={() => setIsMenuOpen(false)}>
             Inicio
           </Link>
-          <Link to="/catalogo" onClick={() => setIsMenuOpen(false)}>
-            Catálogo
-          </Link>
+          <a href="#informacion" onClick={() => setIsMenuOpen(false)}>
+            Información
+          </a>
           <Link to="/catalogo?cat=TEXANAS" onClick={() => setIsMenuOpen(false)}>
             Texanas
           </Link>
@@ -929,6 +929,14 @@ const PolicyPage = () => (
 // En el Routes de App.jsx:
 // <Route path="/cambios" element={<PolicyPage />} />
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
+
 // --- APP PRINCIPAL ---
 
 export default function App() {
@@ -987,7 +995,7 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className="bg-gray-50 py-20 px-6 border-t text-center space-y-8 font-sans">
+        <footer id="informacion" className="bg-gray-50 py-20 px-6 border-t text-center space-y-8 font-sans">
           <h4 className="font-serif text-3xl italic tracking-widest italic">
             MIUCCHA
           </h4>
