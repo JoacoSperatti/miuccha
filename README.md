@@ -20,42 +20,6 @@ Bienvenido al repositorio oficial de **MIUCCHA**, una plataforma de e-commerce d
 * **Catálogo Dinámico:** Filtrado por categorías (Texanas, Botas, Borcegos, Discontinuos) y etiquetas de "Destacados".
 * **Responsive:** Optimizado para dispositivos móviles y escritorio.
 
-## 🛠️ Configuración Local
-
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/tu-usuario/miuccha.git
-    cd miuccha
-    ```
-
-2.  **Instalar dependencias:**
-    ```bash
-    npm install
-    ```
-
-3.  **Variables de Entorno:**
-    Crea un archivo `.env` en la raíz y configura tus credenciales de Firebase (con prefijo VITE_ para que sean accesibles):
-    ```env
-    VITE_FIREBASE_API_KEY=tu_api_key
-    VITE_FIREBASE_AUTH_DOMAIN=tu_auth_domain
-    VITE_FIREBASE_PROJECT_ID=tu_project_id
-    VITE_FIREBASE_STORAGE_BUCKET=tu_storage_bucket
-    VITE_FIREBASE_MESSAGING_SENDER_ID=tu_sender_id
-    VITE_FIREBASE_APP_ID=tu_app_id
-    ```
-
-4.  **Ejecutar en desarrollo:**
-    ```bash
-    npm run dev
-    ```
-
-## 📦 Estructura de la Base de Datos (Firestore)
-
-Para el correcto funcionamiento, se requieren las siguientes colecciones:
-
-* **productos:** Documentos con campos `nombre`, `precio`, `categoria`, `img`, `destacado` (bool) y `stock` (map de talles).
-* **metadata:** Un documento llamado `orders` con un campo `count` (number) para el correlativo de pedidos.
-
 ## 🛡️ Seguridad
 
 * Las credenciales están protegidas mediante variables de entorno en el cliente.
