@@ -19,6 +19,7 @@ import {
 import {
   collection,
   getDocs,
+  getDoc,
   query,
   where,
   doc,
@@ -44,15 +45,20 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
   const finalizarCompra = async () => {
     if (cart.length === 0) return;
     try {
-      // 1. Obtener/Incrementar el número de orden
+      // 1. Obtener/Incrementar el número de orden en la colección metadata/orders
       const metaRef = doc(db, "metadata", "orders");
       await updateDoc(metaRef, { count: increment(1) });
 
-      const { getDoc } = await import("firebase/firestore");
+      // Recuperamos el documento actualizado para obtener el número de orden
       const metaSnap = await getDoc(metaRef);
+      
+      if (!metaSnap.exists()) {
+        throw new Error("El documento de metadata no existe en Firestore");
+      }
+      
       const orderNumber = metaSnap.data().count;
 
-      // 2. Descontar stock
+      // 2. Descontar stock por talle para cada producto en el carrito
       for (const item of cart) {
         const productoRef = doc(db, "productos", item.id);
         await updateDoc(productoRef, {
@@ -60,25 +66,29 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
         });
       }
 
-      // 3. Armar mensaje con Nro de Compra
+      // 3. Armar el texto de los productos
       const productosTxt = cart
         .map((item) => `- ${item.nombre} (Talle: ${item.talle})`)
         .join("\n");
       
+      // 4. Configurar datos de transferencia
       const datosPago = "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: ELIAS";
 
-      const mensajeSucio = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*\n\nQuiero realizar el siguiente pedido:\n\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n📌 *DATOS PARA TRANSFERENCIA:*\n${datosPago}\n\n(Envío el comprobante por acá ni bien realice el pago)`;
+      // 5. Crear el mensaje final
+      const mensajeCuerpo = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*\n\nQuiero realizar el siguiente pedido:\n\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n📌 *DATOS PARA TRANSFERENCIA:*\n${datosPago}\n\n(Envío el comprobante por acá ni bien realice el pago)`;
 
-      // Usamos encodeURIComponent para que los símbolos (#, *) y saltos de línea lleguen bien
-      const whatsappUrl = `https://wa.me/5491131608396?text=${encodeURIComponent(mensajeSucio)}`;
+      // 6. Codificar para URL y definir destino
+      const mensajeCodificado = encodeURIComponent(mensajeCuerpo);
+      const whatsappUrl = `https://wa.me/5491131608396?text=${mensajeCodificado}`;
 
+      // 7. Limpiar estado y redirigir (window.location es más compatible con móviles que window.open)
       setCart([]);
       onClose();
-      window.open(whatsappUrl, "_blank");
+      window.location.href = whatsappUrl;
 
     } catch (error) {
       console.error("Error al procesar el pedido:", error);
-      alert("Error al generar el número de orden o actualizar stock.");
+      alert("Hubo un problema al generar tu pedido. Por favor, intenta de nuevo o contactanos por Instagram.");
     }
   };
 
