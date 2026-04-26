@@ -144,7 +144,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
           <div className="p-8 bg-gray-50 space-y-4 border-t-2 border-white">
             <div className="bg-amber-50 border border-amber-200 p-4">
               <p className="text-[9px] font-bold text-amber-800 uppercase tracking-widest mb-1 font-sans">
-                📌 Pago por Transferencia
+                📌 Pago por Transferencia: pagos.miuccha
               </p>
               <p className="text-[10px] text-amber-900 font-sans">
                 A nombre de <b>ELIAS</b>. Envianos el comprobante por WhatsApp
