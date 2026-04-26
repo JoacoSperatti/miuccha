@@ -51,11 +51,11 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
 
       // Recuperamos el documento actualizado para obtener el número de orden
       const metaSnap = await getDoc(metaRef);
-      
+
       if (!metaSnap.exists()) {
         throw new Error("El documento de metadata no existe en Firestore");
       }
-      
+
       const orderNumber = metaSnap.data().count;
 
       // 2. Descontar stock por talle para cada producto en el carrito
@@ -70,9 +70,10 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
       const productosTxt = cart
         .map((item) => `- ${item.nombre} (Talle: ${item.talle})`)
         .join("\n");
-      
+
       // 4. Configurar datos de transferencia
-      const datosPago = "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: ELIAS";
+      const datosPago =
+        "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: ELIAS";
 
       // 5. Crear el mensaje final
       const mensajeCuerpo = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*\n\nQuiero realizar el siguiente pedido:\n\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n📌 *DATOS PARA TRANSFERENCIA:*\n${datosPago}\n\n(Envío el comprobante por acá ni bien realice el pago)`;
@@ -85,15 +86,18 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
       setCart([]);
       onClose();
       window.location.href = whatsappUrl;
-
     } catch (error) {
       console.error("Error al procesar el pedido:", error);
-      alert("Hubo un problema al generar tu pedido. Por favor, intenta de nuevo o contactanos por Instagram.");
+      alert(
+        "Hubo un problema al generar tu pedido. Por favor, intenta de nuevo o contactanos por Instagram.",
+      );
     }
   };
 
   return (
-    <div className={`fixed inset-0 z-[200] ${isOpen ? "visible" : "invisible"}`}>
+    <div
+      className={`fixed inset-0 z-[200] ${isOpen ? "visible" : "invisible"}`}
+    >
       <div
         className={`absolute inset-0 bg-black/40 transition-opacity duration-500 ${isOpen ? "opacity-100" : "opacity-0"}`}
         onClick={onClose}
@@ -119,7 +123,10 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
             </p>
           ) : (
             cart.map((item, index) => (
-              <div key={index} className="flex gap-4 border-b border-gray-50 pb-6">
+              <div
+                key={index}
+                className="flex gap-4 border-b border-gray-50 pb-6"
+              >
                 <img
                   src={item.img}
                   className="w-20 h-28 object-cover bg-gray-100 shadow-sm"
@@ -139,7 +146,9 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
                       ${item.precio.toLocaleString()}
                     </p>
                     <button
-                      onClick={() => setCart(cart.filter((_, i) => i !== index))}
+                      onClick={() =>
+                        setCart(cart.filter((_, i) => i !== index))
+                      }
                       className="text-[9px] uppercase border-b border-black font-bold text-red-500 border-red-500"
                     >
                       Quitar
@@ -343,19 +352,19 @@ const CategoryGrid = () => {
     {
       id: 1,
       name: "TEXANAS",
-      img: "https://images.pexels.com/photos/1103928/pexels-photo-1103928.jpeg?auto=compress&cs=tinysrgb&w=600",
+      img: "/texanas.jpg",
       link: "/catalogo?cat=TEXANAS",
     },
     {
       id: 2,
       name: "BOTAS",
-      img: "https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=600",
+      img: "/botas.jpg",
       link: "/catalogo?cat=BOTAS",
     },
     {
       id: 3,
       name: "BORCEGOS",
-      img: "https://images.pexels.com/photos/1478442/pexels-photo-1478442.jpeg?auto=compress&cs=tinysrgb&w=600",
+      img: "/borcegos.jpg",
       link: "/catalogo?cat=BORCEGOS",
     },
   ];
@@ -377,9 +386,15 @@ const CategoryGrid = () => {
           </h3>
         </div>
       ))}
-      <div className="flex flex-col items-center justify-center p-10 bg-[#C37D8D] border-2 border-white h-[250px] md:h-[300px] text-center font-serif italic">
+      <div
+        onClick={() => {
+          navigate("/catalogo");
+          window.scrollTo(0, 0);
+        }}
+        className="flex flex-col items-center justify-center p-10 bg-[#C37D8D] border-2 border-white h-[250px] md:h-[300px] text-center font-serif italic cursor-pointer hover:opacity-90 transition-opacity"
+      >
         <h4 className="text-4xl md:text-6xl text-[#E3F285] uppercase tracking-tighter">
-          DATOS TALLES ?
+          MUCHO MÁS
         </h4>
       </div>
     </section>
@@ -393,12 +408,12 @@ const HomeHero = () => {
     {
       id: 1,
       title: "COLECCIÓN 2026",
-      img: "https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=1260",
+      img: "/banner1.jpg",
     },
     {
       id: 2,
       title: "100% CUERO",
-      img: "https://images.pexels.com/photos/1103928/pexels-photo-1103928.jpeg?auto=compress&cs=tinysrgb&w=1260",
+      img: "/banner2.jpg",
     },
   ];
 
