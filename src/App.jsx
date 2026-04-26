@@ -31,8 +31,10 @@ import { db } from "./firebase/config";
 
 // Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay } from "swiper/modules";
+import { Autoplay, Pagination, Navigation } from "swiper/modules";
 import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
 
 // --- COMPONENTES ---
 
@@ -69,7 +71,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
 
       const mensaje = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*%0A%0AQuiero realizar el siguiente pedido:%0A%0A${productosTxt}%0A%0A*Total: $${total.toLocaleString()}*%0A%0A📌 *DATOS PARA TRANSFERENCIA:*%0A${datosPago}%0A%0A(Envío el comprobante por acá ni bien realice el pago)`;
 
-      const whatsappUrl = `https://wa.me/5491165283561?text=${mensaje}`;
+      const whatsappUrl = `https://wa.me/5491131608396?text=${mensaje}`;
       setCart([]);
       onClose();
       window.open(whatsappUrl, "_blank");
@@ -175,7 +177,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
   );
 };
 
-const ProductCard = ({ product, onAddToCart }) => {
+const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
   const [selectedSize, setSelectedSize] = useState(null);
   const stockEntries = product.stock
     ? Object.entries(product.stock).sort()
@@ -231,6 +233,8 @@ const ProductCard = ({ product, onAddToCart }) => {
 
 const Header = ({ cartCount, onCartClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para el menú
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
@@ -255,8 +259,16 @@ const Header = ({ cartCount, onCartClick }) => {
           >
             Catálogo
           </Link>
-          <FaBars className="md:hidden text-black" size={18} />
+
+          {/* BOTÓN HAMBURGUESA REAL */}
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            className="md:hidden text-black p-2"
+          >
+            <FaBars size={20} />
+          </button>
         </div>
+
         <div className="w-1/3 text-center">
           <Link to="/">
             <h1
@@ -266,6 +278,7 @@ const Header = ({ cartCount, onCartClick }) => {
             </h1>
           </Link>
         </div>
+
         <div className="w-1/3 flex justify-end font-sans">
           <div
             onClick={onCartClick}
@@ -283,6 +296,38 @@ const Header = ({ cartCount, onCartClick }) => {
           </div>
         </div>
       </nav>
+
+      {/* PANEL DEL MENÚ MÓVIL */}
+      <div
+        className={`fixed inset-0 bg-white z-[100] transition-transform duration-500 flex flex-col p-10 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <button
+          onClick={() => setIsMenuOpen(false)}
+          className="self-end p-2 mb-10"
+        >
+          <FaTimes size={25} />
+        </button>
+        <div className="flex flex-col gap-8 text-center font-serif text-3xl italic">
+          <Link to="/" onClick={() => setIsMenuOpen(false)}>
+            Inicio
+          </Link>
+          <Link to="/catalogo" onClick={() => setIsMenuOpen(false)}>
+            Catálogo
+          </Link>
+          <Link to="/catalogo?cat=TEXANAS" onClick={() => setIsMenuOpen(false)}>
+            Texanas
+          </Link>
+          <Link to="/catalogo?cat=BOTAS" onClick={() => setIsMenuOpen(false)}>
+            Botas
+          </Link>
+          <Link
+            to="/catalogo?cat=BORCEGOS"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Borcegos
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };
@@ -336,6 +381,8 @@ const CategoryGrid = () => {
   );
 };
 
+// Agregá Pagination y Navigation si no los tenías activos
+
 const HomeHero = () => {
   const slides = [
     {
@@ -343,13 +390,22 @@ const HomeHero = () => {
       title: "COLECCIÓN 2026",
       img: "https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=1260",
     },
+    {
+      id: 2,
+      title: "100% CUERO",
+      img: "https://images.pexels.com/photos/1103928/pexels-photo-1103928.jpeg?auto=compress&cs=tinysrgb&w=1260",
+    },
   ];
+
   return (
-    <section className="relative w-full h-[65vh] md:h-[80vh] overflow-hidden z-0">
+    <section className="relative w-full h-[75vh] md:h-[80vh] overflow-hidden z-0">
       <Swiper
-        modules={[Autoplay]}
+        modules={[Autoplay, Pagination, Navigation]}
         autoplay={{ delay: 5000 }}
-        className="h-full"
+        pagination={{ clickable: true }}
+        navigation={true} // Flechas para desktop
+        loop={true}
+        className="h-full w-full"
       >
         {slides.map((s) => (
           <SwiperSlide key={s.id}>
@@ -359,7 +415,7 @@ const HomeHero = () => {
                 className="w-full h-full object-cover"
                 alt={s.title}
               />
-              <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-center text-white text-center p-4">
+              <div className="absolute inset-0 bg-black/25 flex flex-col items-center justify-center text-white text-center p-4">
                 <h2 className="font-serif text-5xl md:text-8xl mb-4 italic uppercase tracking-widest">
                   {s.title}
                 </h2>
@@ -377,7 +433,7 @@ const HomeHero = () => {
 
 // --- VIEWS ---
 
-const Home = ({ onAddToCart }) => {
+const Home = ({ onAddToCart, onOpenSizeGuide }) => {
   const [featured, setFeatured] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -419,7 +475,12 @@ const Home = ({ onAddToCart }) => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
             {featured.map((p) => (
-              <ProductCard key={p.id} product={p} onAddToCart={onAddToCart} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                onAddToCart={onAddToCart}
+                onOpenSizeGuide={onOpenSizeGuide}
+              />
             ))}
           </div>
         )}
@@ -428,7 +489,7 @@ const Home = ({ onAddToCart }) => {
   );
 };
 
-const CatalogPage = ({ onAddToCart }) => {
+const CatalogPage = ({ onAddToCart, onOpenSizeGuide }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -478,7 +539,12 @@ const CatalogPage = ({ onAddToCart }) => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-24">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} onAddToCart={onAddToCart} />
+            <ProductCard
+              key={p.id}
+              product={p}
+              onAddToCart={onAddToCart}
+              onOpenSizeGuide={onOpenSizeGuide}
+            />
           ))}
         </div>
       )}
@@ -725,11 +791,130 @@ const AdminPanel = () => {
   );
 };
 
+const SizeGuide = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="bg-white w-full max-w-lg p-8 relative z-10 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-black"
+        >
+          <FaTimes size={20} />
+        </button>
+        <h2 className="font-serif text-2xl italic mb-6 border-b pb-2">
+          Guía de Talles
+        </h2>
+        <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-6 font-sans">
+          Medidas aproximadas de la plantilla interna
+        </p>
+
+        <table className="w-full text-left font-sans border-collapse">
+          <thead>
+            <tr className="border-b text-[10px] uppercase tracking-widest text-gray-400">
+              <th className="py-3">Talle</th>
+              <th className="py-3 text-right">Centímetros</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            {[
+              { t: "35", cm: "22.5" },
+              { t: "36", cm: "23.2" },
+              { t: "37", cm: "24.0" },
+              { t: "38", cm: "24.6" },
+              { t: "39", cm: "25.3" },
+              { t: "40", cm: "26.0" },
+              { t: "41", cm: "26.7" },
+              { t: "42", cm: "27.3" },
+              { t: "43", cm: "28.0" },
+            ].map((row) => (
+              <tr
+                key={row.t}
+                className="border-b hover:bg-gray-50 transition-colors"
+              >
+                <td className="py-3 font-bold">Talle {row.t}</td>
+                <td className="py-3 text-right font-mono">{row.cm} cm</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="mt-8 bg-gray-50 p-4 text-[11px] leading-relaxed text-gray-600">
+          <p className="font-bold mb-2 uppercase tracking-tighter text-black">
+            ¿Cómo medir tu pie?
+          </p>
+          <p>
+            Apoyá el pie sobre una hoja de papel, marcá el talón y el dedo más
+            largo. Medí la distancia y sumale 0.5 cm para mayor comodidad.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PolicyPage = () => (
+  <div className="pt-44 pb-24 px-6 max-w-3xl mx-auto font-sans leading-relaxed">
+    <h2 className="font-serif text-4xl italic mb-10 text-center">
+      Cambios y Devoluciones
+    </h2>
+    <div className="space-y-8 text-gray-700 text-sm">
+      <section>
+        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
+          Plazos
+        </h3>
+        <p>
+          Los cambios se pueden realizar dentro de los 30 días corridos
+          posteriores a la compra.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
+          Condiciones
+        </h3>
+        <p>
+          El producto debe estar sin uso, en su caja original y en las mismas
+          condiciones en que fue recibido. No se aceptarán cambios de productos
+          que presenten marcas de uso en la suela o cuero.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
+          Logística
+        </h3>
+        <p>
+          Los costos de envío por cambios corren por cuenta del cliente, a
+          excepción de fallas de fabricación. En caso de falla, MIUCCHA se hace
+          cargo del retiro y reenvío.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-bold uppercase tracking-widest text-black mb-2">
+          Procedimiento
+        </h3>
+        <p>
+          Escribinos a nuestro WhatsApp indicando tu <b>Nro de Orden (#)</b> y
+          el motivo del cambio. Te responderemos a la brevedad con los pasos a
+          seguir.
+        </p>
+      </section>
+    </div>
+  </div>
+);
+
+// En el Routes de App.jsx:
+// <Route path="/cambios" element={<PolicyPage />} />
+
 // --- APP PRINCIPAL ---
 
 export default function App() {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false); // Estado para el modal
 
   const addToCart = (p) => {
     setCart([...cart, p]);
@@ -750,14 +935,35 @@ export default function App() {
           setCart={setCart}
         />
 
+        {/* AGREGAMOS EL MODAL AQUÍ */}
+        <SizeGuide
+          isOpen={isSizeGuideOpen}
+          onClose={() => setIsSizeGuideOpen(false)}
+        />
+
         <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<Home onAddToCart={addToCart} />} />
+            <Route
+              path="/"
+              element={
+                <Home
+                  onAddToCart={addToCart}
+                  onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
+                />
+              }
+            />
             <Route
               path="/catalogo"
-              element={<CatalogPage onAddToCart={addToCart} />}
+              element={
+                <CatalogPage
+                  onAddToCart={addToCart}
+                  onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
+                />
+              }
             />
             <Route path="/gestion-interna" element={<AdminPanel />} />
+            {/* RUTA PARA CAMBIOS */}
+            <Route path="/cambios" element={<PolicyPage />} />
           </Routes>
         </main>
 
@@ -765,8 +971,21 @@ export default function App() {
           <h4 className="font-serif text-3xl italic tracking-widest italic">
             MIUCCHA
           </h4>
+
+          {/* BOTONES DE POLÍTICAS Y TALLES */}
+          <div className="flex flex-col gap-3 text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500">
+            <button
+              onClick={() => setIsSizeGuideOpen(true)}
+              className="hover:text-black transition-colors"
+            >
+              Guía de Talles
+            </button>
+            <Link to="/cambios" className="hover:text-black transition-colors">
+              Cambios y Devoluciones
+            </Link>
+          </div>
+
           <div className="flex justify-center gap-8 text-gray-400">
-            {/* INSTAGRAM */}
             <a
               href="https://www.instagram.com/miucchazapatos/"
               target="_blank"
@@ -776,7 +995,6 @@ export default function App() {
               <FaInstagram size={24} />
             </a>
 
-            {/* WHATSAPP */}
             <a
               href="https://wa.me/5491165283561"
               target="_blank"
