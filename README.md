@@ -5,7 +5,7 @@ Bienvenido al repositorio oficial de **MIUCCHA**, una plataforma de e-commerce d
 ## 🚀 Tecnologías Utilizadas
 
 * **Frontend:** React.js + Vite
-* **Estilos:** Tailwind CSS (Diseño basado en Micadel)
+* **Estilos:** Tailwind CSS 
 * **Base de Datos y Backend:** Firebase (Firestore)
 * **Navegación:** React Router DOM
 * **Componentes de UI:** React Icons, Swiper.js (Carruseles)
