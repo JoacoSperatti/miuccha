@@ -329,7 +329,7 @@ const CategoryGrid = () => {
       ))}
       <div className="flex flex-col items-center justify-center p-10 bg-[#C37D8D] border-2 border-white h-[250px] md:h-[300px] text-center font-serif italic">
         <h4 className="text-4xl md:text-6xl text-[#E3F285] uppercase tracking-tighter">
-          HASTA TALLE 43
+          DATOS TALLES ?
         </h4>
       </div>
     </section>
