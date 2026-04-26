@@ -578,6 +578,7 @@ const AdminPanel = () => {
   const [products, setProducts] = useState([]);
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false); // Estado para feedback visual
   const [newProd, setNewProd] = useState({
     nombre: "",
     precio: "",
@@ -604,6 +605,25 @@ const AdminPanel = () => {
     setLoading(false);
   };
 
+  // Función para convertir archivo a Base64
+  const handleFileChange = (e, callback) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 1000000) { // Límite de ~1MB para no saturar Firestore
+      alert("La imagen es muy pesada. Intentá con una de menos de 1MB.");
+      return;
+    }
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      callback(reader.result);
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
@@ -613,17 +633,11 @@ const AdminPanel = () => {
       });
       alert("¡Producto creado!");
       setNewProd({
-        nombre: "",
-        precio: "",
-        categoria: "BOTAS",
-        destacado: false,
-        img: "",
+        nombre: "", precio: "", categoria: "BOTAS", destacado: false, img: "",
         stock: { 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0 },
       });
       fetchProducts();
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const updateField = async (id, field, value) => {
@@ -631,9 +645,7 @@ const AdminPanel = () => {
       const val = field === "precio" ? parseInt(value) : value;
       await updateDoc(doc(db, "productos", id), { [field]: val });
       fetchProducts();
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const updateStock = async (id, talle, nuevoValor) => {
@@ -642,9 +654,7 @@ const AdminPanel = () => {
         [`stock.${talle}`]: parseInt(nuevoValor),
       });
       fetchProducts();
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const deleteProduct = async (id) => {
@@ -655,151 +665,73 @@ const AdminPanel = () => {
   };
 
   if (!authorized || loading)
-    return (
-      <div className="pt-40 text-center font-serif italic text-gray-400">
-        Verificando...
-      </div>
-    );
+    return <div className="pt-40 text-center font-serif italic text-gray-400">Verificando...</div>;
 
   return (
     <div className="pt-40 px-6 max-w-6xl mx-auto mb-20 font-sans">
-      <h2 className="font-serif text-3xl mb-8 border-b pb-4 italic tracking-widest uppercase italic">
-        Panel Miuccha
-      </h2>
+      <h2 className="font-serif text-3xl mb-8 border-b pb-4 italic tracking-widest uppercase italic">Panel Miuccha</h2>
 
-      <form
-        onSubmit={handleCreate}
-        className="bg-gray-50 p-8 rounded-lg mb-16 border grid grid-cols-1 md:grid-cols-3 gap-6"
-      >
+      {/* FORMULARIO NUEVO PRODUCTO */}
+      <form onSubmit={handleCreate} className="bg-gray-50 p-8 rounded-lg mb-16 border grid grid-cols-1 md:grid-cols-3 gap-6">
         <h3 className="col-span-full font-serif text-xl mb-2">Nuevo Modelo</h3>
-        <input
-          type="text"
-          placeholder="Nombre"
-          className="p-3 border text-sm"
-          value={newProd.nombre}
-          onChange={(e) => setNewProd({ ...newProd, nombre: e.target.value })}
-          required
-        />
-        <input
-          type="number"
-          placeholder="Precio"
-          className="p-3 border text-sm"
-          value={newProd.precio}
-          onChange={(e) => setNewProd({ ...newProd, precio: e.target.value })}
-          required
-        />
-        <select
-          className="p-3 border text-sm"
-          value={newProd.categoria}
-          onChange={(e) =>
-            setNewProd({ ...newProd, categoria: e.target.value })
-          }
-        >
+        <input type="text" placeholder="Nombre" className="p-3 border text-sm" value={newProd.nombre} onChange={(e) => setNewProd({ ...newProd, nombre: e.target.value })} required />
+        <input type="number" placeholder="Precio" className="p-3 border text-sm" value={newProd.precio} onChange={(e) => setNewProd({ ...newProd, precio: e.target.value })} required />
+        <select className="p-3 border text-sm" value={newProd.categoria} onChange={(e) => setNewProd({ ...newProd, categoria: e.target.value })}>
           <option value="TEXANAS">TEXANAS</option>
           <option value="BOTAS">BOTAS</option>
           <option value="BORCEGOS">BORCEGOS</option>
         </select>
-        <input
-          type="text"
-          placeholder="URL Imagen"
-          className="p-3 border text-sm md:col-span-2"
-          value={newProd.img}
-          onChange={(e) => setNewProd({ ...newProd, img: e.target.value })}
-          required
-        />
+        
+        <div className="md:col-span-2 flex flex-col gap-2">
+          <input type="text" placeholder="URL Imagen" className="p-3 border text-sm w-full" value={newProd.img} onChange={(e) => setNewProd({ ...newProd, img: e.target.value })} />
+          <span className="text-[10px] font-bold text-gray-400">O CARGÁ DESDE EL DISPOSITIVO:</span>
+          <input type="file" accept="image/*" className="text-xs" onChange={(e) => handleFileChange(e, (base64) => setNewProd({...newProd, img: base64}))} />
+        </div>
+
         <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-          <input
-            type="checkbox"
-            checked={newProd.destacado}
-            onChange={(e) =>
-              setNewProd({ ...newProd, destacado: e.target.checked })
-            }
-          />{" "}
-          Home
+          <input type="checkbox" checked={newProd.destacado} onChange={(e) => setNewProd({ ...newProd, destacado: e.target.checked })} /> Home
         </label>
+        
         <div className="col-span-full grid grid-cols-3 sm:grid-cols-6 gap-2 mt-4">
           {Object.keys(newProd.stock).map((talle) => (
             <div key={talle} className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-gray-400 text-center">
-                T.{talle}
-              </span>
-              <input
-                type="number"
-                className="p-2 border text-center text-xs"
-                value={newProd.stock[talle]}
-                onChange={(e) =>
-                  setNewProd({
-                    ...newProd,
-                    stock: { ...newProd.stock, [talle]: e.target.value },
-                  })
-                }
-              />
+              <span className="text-[10px] font-bold text-gray-400 text-center">T.{talle}</span>
+              <input type="number" className="p-2 border text-center text-xs" value={newProd.stock[talle]} onChange={(e) => setNewProd({ ...newProd, stock: { ...newProd.stock, [talle]: e.target.value } })} />
             </div>
           ))}
         </div>
-        <button
-          type="submit"
-          className="col-span-full bg-black text-white py-4 uppercase text-[10px] tracking-widest font-bold"
-        >
-          Guardar
+        <button type="submit" disabled={uploading} className="col-span-full bg-black text-white py-4 uppercase text-[10px] tracking-widest font-bold disabled:bg-gray-400">
+          {uploading ? "Cargando imagen..." : "Guardar Producto"}
         </button>
       </form>
 
+      {/* LISTADO DE PRODUCTOS EXISTENTES */}
       <div className="space-y-6">
         {products.map((p) => (
-          <div
-            key={p.id}
-            className="p-6 border bg-white shadow-sm flex flex-col md:flex-row gap-6 relative"
-          >
-            <button
-              onClick={() => deleteProduct(p.id)}
-              className="absolute top-4 right-4 text-red-500 font-bold p-2"
-            >
-              <FaTimes size={14} />
-            </button>
-            <img src={p.img} className="w-32 h-40 object-cover" alt="" />
+          <div key={p.id} className="p-6 border bg-white shadow-sm flex flex-col md:flex-row gap-6 relative">
+            <button onClick={() => deleteProduct(p.id)} className="absolute top-4 right-4 text-red-500 font-bold p-2"><FaTimes size={14} /></button>
+            
+            <div className="flex flex-col items-center gap-2">
+              <img src={p.img} className="w-32 h-40 object-cover border" alt="" />
+              <input type="file" accept="image/*" id={`file-${p.id}`} className="hidden" onChange={(e) => handleFileChange(e, (base64) => updateField(p.id, "img", base64))} />
+              <label htmlFor={`file-${p.id}`} className="text-[9px] bg-gray-100 px-2 py-1 cursor-pointer hover:bg-black hover:text-white transition-all font-bold uppercase">Cambiar Foto</label>
+            </div>
+
             <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-4">
-                <input
-                  type="text"
-                  defaultValue={p.nombre}
-                  onBlur={(e) => updateField(p.id, "nombre", e.target.value)}
-                  className="w-full font-bold border-b outline-none"
-                />
+                <input type="text" defaultValue={p.nombre} onBlur={(e) => updateField(p.id, "nombre", e.target.value)} className="w-full font-bold border-b outline-none" />
                 <div className="flex gap-4">
-                  <input
-                    type="number"
-                    defaultValue={p.precio}
-                    onBlur={(e) => updateField(p.id, "precio", e.target.value)}
-                    className="w-24 border-b outline-none text-sm font-bold"
-                  />
+                  <input type="number" defaultValue={p.precio} onBlur={(e) => updateField(p.id, "precio", e.target.value)} className="w-24 border-b outline-none text-sm font-bold" />
                   <label className="text-[10px] flex items-center gap-1 font-bold uppercase">
-                    <input
-                      type="checkbox"
-                      defaultChecked={p.destacado}
-                      onChange={(e) =>
-                        updateField(p.id, "destacado", e.target.checked)
-                      }
-                    />{" "}
-                    Home
+                    <input type="checkbox" defaultChecked={p.destacado} onChange={(e) => updateField(p.id, "destacado", e.target.checked)} /> Home
                   </label>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 h-fit self-end">
                 {Object.entries(p.stock || {}).map(([talle, cant]) => (
-                  <div
-                    key={talle}
-                    className="flex flex-col items-center border p-2 bg-gray-50 rounded"
-                  >
-                    <span className="text-[9px] font-bold text-gray-400">
-                      T.{talle}
-                    </span>
-                    <input
-                      type="number"
-                      defaultValue={cant}
-                      onBlur={(e) => updateStock(p.id, talle, e.target.value)}
-                      className="w-8 text-center text-xs font-bold bg-transparent outline-none"
-                    />
+                  <div key={talle} className="flex flex-col items-center border p-2 bg-gray-50 rounded">
+                    <span className="text-[9px] font-bold text-gray-400">T.{talle}</span>
+                    <input type="number" defaultValue={cant} onBlur={(e) => updateStock(p.id, talle, e.target.value)} className="w-8 text-center text-xs font-bold bg-transparent outline-none" />
                   </div>
                 ))}
               </div>
