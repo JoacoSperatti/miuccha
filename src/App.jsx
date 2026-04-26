@@ -44,12 +44,10 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
   const finalizarCompra = async () => {
     if (cart.length === 0) return;
     try {
-      // 1. Obtener/Incrementar el número de orden (Usamos un doc "metadata" en Firebase)
+      // 1. Obtener/Incrementar el número de orden
       const metaRef = doc(db, "metadata", "orders");
-      // Nota: Si es la primera vez, asegurate de crear este doc en la consola con { count: 0 }
       await updateDoc(metaRef, { count: increment(1) });
 
-      // Recuperamos el número actualizado para mostrarlo
       const { getDoc } = await import("firebase/firestore");
       const metaSnap = await getDoc(metaRef);
       const orderNumber = metaSnap.data().count;
@@ -65,25 +63,27 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
       // 3. Armar mensaje con Nro de Compra
       const productosTxt = cart
         .map((item) => `- ${item.nombre} (Talle: ${item.talle})`)
-        .join("%0A");
-      const datosPago =
-        "ALIAS: pagos.miuccha%0ACBU: 0000003100012345678901%0ATitular: NOMBRE";
+        .join("\n");
+      
+      const datosPago = "ALIAS: pagos.miuccha\nCBU: 0000003100012345678901\nTitular: ELIAS";
 
-      const mensaje = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*%0A%0AQuiero realizar el siguiente pedido:%0A%0A${productosTxt}%0A%0A*Total: $${total.toLocaleString()}*%0A%0A📌 *DATOS PARA TRANSFERENCIA:*%0A${datosPago}%0A%0A(Envío el comprobante por acá ni bien realice el pago)`;
+      const mensajeSucio = `Hola Miuccha! 👋 *ORDEN DE COMPRA #${orderNumber}*\n\nQuiero realizar el siguiente pedido:\n\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n📌 *DATOS PARA TRANSFERENCIA:*\n${datosPago}\n\n(Envío el comprobante por acá ni bien realice el pago)`;
 
-      const whatsappUrl = `https://wa.me/5491131608396?text=${mensaje}`;
+      // Usamos encodeURIComponent para que los símbolos (#, *) y saltos de línea lleguen bien
+      const whatsappUrl = `https://wa.me/5491131608396?text=${encodeURIComponent(mensajeSucio)}`;
+
       setCart([]);
       onClose();
       window.open(whatsappUrl, "_blank");
+
     } catch (error) {
       console.error("Error al procesar el pedido:", error);
       alert("Error al generar el número de orden o actualizar stock.");
     }
   };
+
   return (
-    <div
-      className={`fixed inset-0 z-[200] ${isOpen ? "visible" : "invisible"}`}
-    >
+    <div className={`fixed inset-0 z-[200] ${isOpen ? "visible" : "invisible"}`}>
       <div
         className={`absolute inset-0 bg-black/40 transition-opacity duration-500 ${isOpen ? "opacity-100" : "opacity-0"}`}
         onClick={onClose}
@@ -109,10 +109,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
             </p>
           ) : (
             cart.map((item, index) => (
-              <div
-                key={index}
-                className="flex gap-4 border-b border-gray-50 pb-6"
-              >
+              <div key={index} className="flex gap-4 border-b border-gray-50 pb-6">
                 <img
                   src={item.img}
                   className="w-20 h-28 object-cover bg-gray-100 shadow-sm"
@@ -132,9 +129,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
                       ${item.precio.toLocaleString()}
                     </p>
                     <button
-                      onClick={() =>
-                        setCart(cart.filter((_, i) => i !== index))
-                      }
+                      onClick={() => setCart(cart.filter((_, i) => i !== index))}
                       className="text-[9px] uppercase border-b border-black font-bold text-red-500 border-red-500"
                     >
                       Quitar
@@ -152,7 +147,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
                 📌 Pago por Transferencia
               </p>
               <p className="text-[10px] text-amber-900 font-sans">
-                A nombre de <b>NOMBRE</b>. Envianos el comprobante por WhatsApp
+                A nombre de <b>ELIAS</b>. Envianos el comprobante por WhatsApp
                 para despachar.
               </p>
             </div>
