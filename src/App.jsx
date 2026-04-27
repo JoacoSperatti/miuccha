@@ -258,11 +258,12 @@ const Header = ({ cartCount, onCartClick }) => {
       <div className={`fixed inset-0 bg-white z-[100] transition-transform duration-500 flex flex-col p-10 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <button onClick={() => setIsMenuOpen(false)} className="self-end p-2 mb-10"><FaTimes size={25} /></button>
         <div className="flex flex-col gap-8 text-center font-serif text-3xl italic">
-          <Link to="/" onClick={() => setIsMenuOpen(false)}>Inicio</Link>
+          <Link to="/catalogo" onClick={() => setIsMenuOpen(false)}>Catalogo</Link>
           <a href="#informacion" onClick={() => setIsMenuOpen(false)}>Información</a>
           <Link to="/catalogo?cat=TEXANAS" onClick={() => setIsMenuOpen(false)}>Texanas</Link>
           <Link to="/catalogo?cat=BOTAS" onClick={() => setIsMenuOpen(false)}>Botas</Link>
           <Link to="/catalogo?cat=BORCEGOS" onClick={() => setIsMenuOpen(false)}>Borcegos</Link>
+          <Link to="/cambios" onClick={() => setIsMenuOpen(false)}>Devoluciones</Link>
         </div>
       </div>
     </div>
