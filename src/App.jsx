@@ -38,6 +38,8 @@ import "swiper/css/pagination";
 import "swiper/css/navigation";
 import Swal from "sweetalert2";
 
+const TALLES = [35, 36, 37, 38, 39, 40];
+
 const Toast = Swal.mixin({
   toast: true,
   position: "top-end",
@@ -69,9 +71,17 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
 
       for (const item of cart) {
         const productoRef = doc(db, "productos", item.id);
-        await updateDoc(productoRef, {
-          [`stock.${item.talle}`]: increment(-1),
-        });
+        const itemSnap = await getDoc(productoRef);
+        
+        if (itemSnap.exists()) {
+          const dbData = itemSnap.data();
+          const isFlat = typeof dbData.stock?.[TALLES[0]] === 'number';
+          const updateField = isFlat ? `stock.${item.talle}` : `stock.${item.color || 'Único'}.${item.talle}`;
+          
+          await updateDoc(productoRef, {
+            [updateField]: increment(-1),
+          });
+        }
       }
 
       const productosTxt = cart
@@ -206,21 +216,22 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
 };
 
 const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
-  const [selectedSize, setSelectedSize] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(null);
-  const [imgIndex, setImgIndex] = useState(0);
-
-  const stockEntries = product.stock
-    ? Object.entries(product.stock).sort()
-    : [];
   const coloresArray = Array.isArray(product.colores) ? product.colores : [];
   const hasColors = coloresArray.length > 0;
+  
+  const [selectedColor, setSelectedColor] = useState(hasColors ? coloresArray[0] : "Único");
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [imgIndex, setImgIndex] = useState(0);
+
   const images =
     product.galeria && product.galeria.length > 0
       ? [product.img, ...product.galeria]
       : [product.img];
 
-  const canAdd = selectedSize && (!hasColors || selectedColor);
+  const isFlatStock = product.stock && typeof product.stock[TALLES[0]] === 'number';
+  const currentStock = isFlatStock ? (product.stock || {}) : (product.stock?.[selectedColor] || {});
+
+  const canAdd = selectedSize;
 
   const nextImg = (e) => {
     e.stopPropagation();
@@ -236,11 +247,15 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
     onAddToCart({
       ...product,
       talle: selectedSize,
-      color: selectedColor || "Único",
+      color: selectedColor,
     });
     setSelectedSize(null);
-    setSelectedColor(null);
     Toast.fire({ icon: "success", title: "Agregado al carrito" });
+  };
+
+  const handleColorChange = (c) => {
+    setSelectedColor(c);
+    setSelectedSize(null);
   };
 
   return (
@@ -284,7 +299,7 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
           {coloresArray.map((c) => (
             <button
               key={c}
-              onClick={() => setSelectedColor(c)}
+              onClick={() => handleColorChange(c)}
               className={`px-3 py-1 text-[9px] uppercase tracking-widest border transition-all ${selectedColor === c ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-200 hover:border-black"}`}
             >
               {c}
@@ -301,16 +316,19 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
       </button>
 
       <div className="flex flex-wrap justify-center gap-2 mb-4 font-sans">
-        {stockEntries.map(([talle, cant]) => (
-          <button
-            key={talle}
-            disabled={cant <= 0}
-            onClick={() => setSelectedSize(talle)}
-            className={`w-8 h-8 text-[9px] border flex items-center justify-center transition-all ${cant <= 0 ? "opacity-20 cursor-not-allowed bg-gray-50 line-through" : "hover:border-black font-bold"} ${selectedSize === talle ? "bg-black text-white border-black" : "bg-white text-black border-gray-200"}`}
-          >
-            {talle}
-          </button>
-        ))}
+        {TALLES.map((talle) => {
+          const cant = currentStock[talle] || 0;
+          return (
+            <button
+              key={talle}
+              disabled={cant <= 0}
+              onClick={() => setSelectedSize(talle)}
+              className={`w-8 h-8 text-[9px] border flex items-center justify-center transition-all ${cant <= 0 ? "opacity-20 cursor-not-allowed bg-gray-50 line-through" : "hover:border-black font-bold"} ${selectedSize === talle ? "bg-black text-white border-black" : "bg-white text-black border-gray-200"}`}
+            >
+              {talle}
+            </button>
+          );
+        })}
       </div>
 
       <button
@@ -320,9 +338,7 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
       >
         {canAdd
           ? "Agregar al carrito"
-          : hasColors && !selectedColor
-            ? "Seleccionar color y talle"
-            : "Seleccionar talle"}
+          : "Seleccionar talle"}
       </button>
     </div>
   );
@@ -651,7 +667,7 @@ const AdminPanel = () => {
     img: "",
     colores: "",
     galeria: [],
-    stock: { 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0 },
+    stock: {},
   });
 
   const fetchProducts = async () => {
@@ -779,9 +795,20 @@ const AdminPanel = () => {
         .split(",")
         .map((c) => c.trim())
         .filter((c) => c !== "");
+      const coloresKeys = coloresArray.length > 0 ? coloresArray : ["Único"];
+
+      const finalStock = {};
+      coloresKeys.forEach((color) => {
+        finalStock[color] = {};
+        TALLES.forEach((t) => {
+          finalStock[color][t] = parseInt(newProd.stock[color]?.[t]) || 0;
+        });
+      });
+
       await addDoc(collection(db, "productos"), {
         ...newProd,
         colores: coloresArray,
+        stock: finalStock,
         precio: parseInt(newProd.precio),
       });
       Swal.fire({
@@ -798,7 +825,7 @@ const AdminPanel = () => {
         img: "",
         colores: "",
         galeria: [],
-        stock: { 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0 },
+        stock: {},
       });
       fetchProducts();
     } catch (e) {
@@ -823,10 +850,11 @@ const AdminPanel = () => {
     }
   };
 
-  const updateStock = async (id, talle, nuevoValor) => {
+  const updateStock = async (id, color, talle, nuevoValor, isFlat) => {
     try {
+      const field = isFlat ? `stock.${talle}` : `stock.${color}.${talle}`;
       await updateDoc(doc(db, "productos", id), {
-        [`stock.${talle}`]: parseInt(nuevoValor),
+        [field]: parseInt(nuevoValor),
       });
       fetchProducts();
       Toast.fire({ icon: "success", title: `Stock T.${talle} actualizado` });
@@ -904,6 +932,13 @@ const AdminPanel = () => {
         Cargando catálogo...
       </div>
     );
+
+  const coloresArrayKeys = newProd.colores
+    .split(",")
+    .map((c) => c.trim())
+    .filter((c) => c !== "");
+  const coloresFormRender =
+    coloresArrayKeys.length > 0 ? coloresArrayKeys : ["Único"];
 
   return (
     <div className="pt-40 px-6 max-w-6xl mx-auto mb-20 font-sans">
@@ -1072,33 +1107,46 @@ const AdminPanel = () => {
           </div>
         )}
 
-        <div className="col-span-full flex flex-col gap-2 mt-4">
-          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest border-b pb-2 mb-2">
+        <div className="col-span-full flex flex-col gap-4 mt-4">
+          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest border-b pb-2">
             Stock Inicial por Talle
           </span>
-          <div className="grid grid-cols-4 sm:grid-cols-9 gap-2">
-            {Object.keys(newProd.stock).map((talle) => (
-              <div
-                key={talle}
-                className="flex flex-col gap-1 items-center bg-gray-50 p-2 border rounded"
-              >
-                <span className="text-[10px] font-bold text-gray-500">
-                  T.{talle}
-                </span>
-                <input
-                  type="number"
-                  className="w-full p-2 border text-center text-xs focus:border-black focus:outline-none"
-                  value={newProd.stock[talle]}
-                  onChange={(e) =>
-                    setNewProd({
-                      ...newProd,
-                      stock: { ...newProd.stock, [talle]: e.target.value },
-                    })
-                  }
-                />
+          {coloresFormRender.map((color) => (
+            <div key={color} className="bg-gray-50 p-4 border rounded">
+              <span className="text-[10px] font-bold uppercase mb-3 block">
+                Color: {color}
+              </span>
+              <div className="grid grid-cols-6 gap-2">
+                {TALLES.map((talle) => (
+                  <div
+                    key={talle}
+                    className="flex flex-col gap-1 items-center bg-white p-2 border rounded"
+                  >
+                    <span className="text-[10px] font-bold text-gray-500">
+                      T.{talle}
+                    </span>
+                    <input
+                      type="number"
+                      className="w-full p-2 border text-center text-xs focus:border-black focus:outline-none"
+                      value={newProd.stock[color]?.[talle] || 0}
+                      onChange={(e) =>
+                        setNewProd({
+                          ...newProd,
+                          stock: {
+                            ...newProd.stock,
+                            [color]: {
+                              ...(newProd.stock[color] || {}),
+                              [talle]: e.target.value,
+                            },
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         <div className="col-span-full flex items-center justify-between mt-6 pt-6 border-t">
@@ -1126,184 +1174,211 @@ const AdminPanel = () => {
       {/* LISTADO DE PRODUCTOS EXISTENTES */}
       <h3 className="font-serif text-2xl mb-6 italic">Catálogo Actual</h3>
       <div className="space-y-6">
-        {products.map((p) => (
-          <div
-            key={p.id}
-            className="p-6 border bg-white shadow-sm flex flex-col md:flex-row gap-6 relative rounded-lg"
-          >
-            <button
-              onClick={() => deleteProduct(p.id)}
-              className="absolute top-4 right-4 text-red-500 hover:text-red-700 hover:scale-110 transition-transform p-2"
-            >
-              <FaTrash size={16} />
-            </button>
+        {products.map((p) => {
+          const pColores = p.colores?.length > 0 ? p.colores : ["Único"];
+          const isFlat = typeof p.stock?.[TALLES[0]] === "number";
 
-            <div className="w-full md:w-1/3 flex flex-col gap-4">
-              <div className="flex flex-wrap gap-2 p-3 border bg-gray-50 rounded min-h-[120px]">
-                <div className="relative w-20 h-28 group">
-                  <img
-                    src={p.img}
-                    className="w-full h-full object-cover border-2 border-black"
-                    alt="Portada"
-                  />
-                  <span className="absolute bottom-0 inset-x-0 bg-black/80 text-white text-[7px] text-center font-bold py-1">
-                    PORTADA
-                  </span>
-                  <button
-                    onClick={() => handleDeleteImage(p.id, "main")}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    ✕
-                  </button>
-                </div>
-                {(p.galeria || []).map((img, idx) => (
-                  <div key={idx} className="relative w-20 h-28 group">
+          return (
+            <div
+              key={p.id}
+              className="p-6 border bg-white shadow-sm flex flex-col md:flex-row gap-6 relative rounded-lg"
+            >
+              <button
+                onClick={() => deleteProduct(p.id)}
+                className="absolute top-4 right-4 text-red-500 hover:text-red-700 hover:scale-110 transition-transform p-2"
+              >
+                <FaTrash size={16} />
+              </button>
+
+              <div className="w-full md:w-1/3 flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2 p-3 border bg-gray-50 rounded min-h-[120px]">
+                  <div className="relative w-20 h-28 group">
                     <img
-                      src={img}
-                      className="w-full h-full object-cover border"
-                      alt="Galeria"
+                      src={p.img}
+                      className="w-full h-full object-cover border-2 border-black"
+                      alt="Portada"
                     />
+                    <span className="absolute bottom-0 inset-x-0 bg-black/80 text-white text-[7px] text-center font-bold py-1">
+                      PORTADA
+                    </span>
                     <button
-                      onClick={() => handleDeleteImage(p.id, "galeria", idx)}
+                      onClick={() => handleDeleteImage(p.id, "main")}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       ✕
                     </button>
                   </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  id={`main-${p.id}`}
-                  className="hidden"
-                  onChange={(e) =>
-                    handleSingleFile(e, (base64) =>
-                      updateField(p.id, "img", base64),
-                    )
-                  }
-                />
-                <label
-                  htmlFor={`main-${p.id}`}
-                  className="text-[8px] border border-gray-300 py-3 text-center cursor-pointer hover:bg-black hover:text-white font-bold uppercase transition-all rounded"
-                >
-                  {uploading ? "Cargando..." : "Cambiar Portada"}
-                </label>
-
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  id={`gal-${p.id}`}
-                  className="hidden"
-                  onChange={(e) =>
-                    handleMultipleFiles(e, (base64Arr) =>
-                      updateField(p.id, "galeria", [
-                        ...(p.galeria || []),
-                        ...base64Arr,
-                      ]),
-                    )
-                  }
-                />
-                <label
-                  htmlFor={`gal-${p.id}`}
-                  className="text-[8px] bg-black text-white py-3 text-center cursor-pointer hover:bg-gray-800 font-bold uppercase transition-all rounded shadow"
-                >
-                  {uploading ? "Cargando..." : "+ Añadir Fotos"}
-                </label>
-              </div>
-            </div>
-
-            <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
-                    Nombre
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue={p.nombre}
-                    onBlur={(e) => updateField(p.id, "nombre", e.target.value)}
-                    className="w-full font-bold border-b pb-1 focus:outline-none focus:border-black text-lg"
-                  />
-                </div>
-                <div>
-                  <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
-                    Colores (separar con coma)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Agregar colores..."
-                    defaultValue={(p.colores || []).join(", ")}
-                    onBlur={(e) =>
-                      updateField(
-                        p.id,
-                        "colores",
-                        e.target.value
-                          .split(",")
-                          .map((c) => c.trim())
-                          .filter((c) => c !== ""),
-                      )
-                    }
-                    className="w-full border-b pb-1 focus:outline-none focus:border-black text-sm text-gray-600"
-                  />
-                </div>
-                <div className="flex items-end gap-6 pt-2">
-                  <div>
-                    <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
-                      Precio ($)
-                    </label>
-                    <input
-                      type="number"
-                      defaultValue={p.precio}
-                      onBlur={(e) =>
-                        updateField(p.id, "precio", e.target.value)
-                      }
-                      className="w-24 border-b pb-1 focus:outline-none focus:border-black text-lg font-bold"
-                    />
-                  </div>
-                  <label className="text-[10px] flex items-center gap-2 font-bold uppercase cursor-pointer mb-1 border px-3 py-1 rounded bg-gray-50">
-                    <input
-                      type="checkbox"
-                      className="accent-black"
-                      defaultChecked={p.destacado}
-                      onChange={(e) =>
-                        updateField(p.id, "destacado", e.target.checked)
-                      }
-                    />
-                    Destacado Home
-                  </label>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 border rounded">
-                <label className="text-[9px] uppercase tracking-widest font-bold text-gray-500 block mb-3 text-center">
-                  Control de Stock
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(p.stock || {}).map(([talle, cant]) => (
-                    <div
-                      key={talle}
-                      className="flex flex-col items-center bg-white border p-1 rounded"
-                    >
-                      <span className="text-[9px] font-bold text-gray-400">
-                        T.{talle}
-                      </span>
-                      <input
-                        type="number"
-                        defaultValue={cant}
-                        onBlur={(e) => updateStock(p.id, talle, e.target.value)}
-                        className="w-10 text-center text-sm font-bold bg-transparent outline-none focus:text-blue-600"
+                  {(p.galeria || []).map((img, idx) => (
+                    <div key={idx} className="relative w-20 h-28 group">
+                      <img
+                        src={img}
+                        className="w-full h-full object-cover border"
+                        alt="Galeria"
                       />
+                      <button
+                        onClick={() => handleDeleteImage(p.id, "galeria", idx)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ✕
+                      </button>
                     </div>
                   ))}
                 </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id={`main-${p.id}`}
+                    className="hidden"
+                    onChange={(e) =>
+                      handleSingleFile(e, (base64) =>
+                        updateField(p.id, "img", base64),
+                      )
+                    }
+                  />
+                  <label
+                    htmlFor={`main-${p.id}`}
+                    className="text-[8px] border border-gray-300 py-3 text-center cursor-pointer hover:bg-black hover:text-white font-bold uppercase transition-all rounded"
+                  >
+                    {uploading ? "Cargando..." : "Cambiar Portada"}
+                  </label>
+
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    id={`gal-${p.id}`}
+                    className="hidden"
+                    onChange={(e) =>
+                      handleMultipleFiles(e, (base64Arr) =>
+                        updateField(p.id, "galeria", [
+                          ...(p.galeria || []),
+                          ...base64Arr,
+                        ]),
+                      )
+                    }
+                  />
+                  <label
+                    htmlFor={`gal-${p.id}`}
+                    className="text-[8px] bg-black text-white py-3 text-center cursor-pointer hover:bg-gray-800 font-bold uppercase transition-all rounded shadow"
+                  >
+                    {uploading ? "Cargando..." : "+ Añadir Fotos"}
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex-grow grid grid-cols-1 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue={p.nombre}
+                      onBlur={(e) =>
+                        updateField(p.id, "nombre", e.target.value)
+                      }
+                      className="w-full font-bold border-b pb-1 focus:outline-none focus:border-black text-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
+                      Colores (separar con coma)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Agregar colores..."
+                      defaultValue={(p.colores || []).join(", ")}
+                      onBlur={(e) =>
+                        updateField(
+                          p.id,
+                          "colores",
+                          e.target.value
+                            .split(",")
+                            .map((c) => c.trim())
+                            .filter((c) => c !== ""),
+                        )
+                      }
+                      className="w-full border-b pb-1 focus:outline-none focus:border-black text-sm text-gray-600"
+                    />
+                  </div>
+                  <div className="flex items-end gap-6 pt-2">
+                    <div>
+                      <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
+                        Precio ($)
+                      </label>
+                      <input
+                        type="number"
+                        defaultValue={p.precio}
+                        onBlur={(e) =>
+                          updateField(p.id, "precio", e.target.value)
+                        }
+                        className="w-24 border-b pb-1 focus:outline-none focus:border-black text-lg font-bold"
+                      />
+                    </div>
+                    <label className="text-[10px] flex items-center gap-2 font-bold uppercase cursor-pointer mb-1 border px-3 py-1 rounded bg-gray-50">
+                      <input
+                        type="checkbox"
+                        className="accent-black"
+                        defaultChecked={p.destacado}
+                        onChange={(e) =>
+                          updateField(p.id, "destacado", e.target.checked)
+                        }
+                      />
+                      Destacado Home
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 border rounded space-y-4">
+                  <label className="text-[9px] uppercase tracking-widest font-bold text-gray-500 block text-center border-b pb-2">
+                    Control de Stock Multidimensional
+                  </label>
+                  {pColores.map((color) => {
+                    const colorStock = isFlat
+                      ? p.stock
+                      : p.stock?.[color] || {};
+                    return (
+                      <div key={color}>
+                        <span className="text-[9px] font-bold uppercase mb-2 block text-black">
+                          Color: {color}
+                        </span>
+                        <div className="grid grid-cols-6 gap-2">
+                          {TALLES.map((talle) => (
+                            <div
+                              key={talle}
+                              className="flex flex-col items-center bg-white border p-1 rounded"
+                            >
+                              <span className="text-[8px] font-bold text-gray-400">
+                                T.{talle}
+                              </span>
+                              <input
+                                type="number"
+                                defaultValue={colorStock[talle] || 0}
+                                onBlur={(e) =>
+                                  updateStock(
+                                    p.id,
+                                    color,
+                                    talle,
+                                    e.target.value,
+                                    isFlat,
+                                  )
+                                }
+                                className="w-full text-center text-xs font-bold bg-transparent outline-none focus:text-blue-600"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1439,6 +1514,7 @@ export default function App() {
           cart={cart}
           setCart={setCart}
         />
+
         <SizeGuide
           isOpen={isSizeGuideOpen}
           onClose={() => setIsSizeGuideOpen(false)}
@@ -1476,6 +1552,7 @@ export default function App() {
           <h4 className="font-serif text-3xl italic tracking-widest italic">
             MIUCCHA
           </h4>
+
           <div className="flex flex-col gap-3 text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500">
             <button
               onClick={() => setIsSizeGuideOpen(true)}
@@ -1487,6 +1564,7 @@ export default function App() {
               Cambios y Devoluciones
             </Link>
           </div>
+
           <div className="flex justify-center gap-8 text-gray-400">
             <a
               href="https://www.instagram.com/miucchazapatos/"
@@ -1496,6 +1574,7 @@ export default function App() {
             >
               <FaInstagram size={24} />
             </a>
+
             <a
               href="https://wa.me/5491165283561"
               target="_blank"
