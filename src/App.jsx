@@ -1587,6 +1587,17 @@ export default function App() {
           <p className="text-[9px] text-gray-400 uppercase tracking-[0.4em] font-bold font-sans">
             © 2026 MIUCCHA - Calzado de Autor
           </p>
+          <p className="text-[9px] text-gray-400 uppercase tracking-[0.4em] font-bold font-sans mt-2">
+            Desarrollado por{" "}
+            <a
+              href="https://portafolio-joaquinsperatti.vercel.app/"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-black transition-colors duration-300 underline"
+            >
+              Joaquín Speratti
+            </a>
+          </p>
         </footer>
 
         <a
