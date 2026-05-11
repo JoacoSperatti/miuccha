@@ -18,6 +18,15 @@ export default {
         'serif': ['"Playfair Display"', 'serif'],
         'sans': ['Montserrat', 'sans-serif'],
       },
+      keyframes: {
+        marquee: {
+          '0%': { transform: 'translateX(100vw)' },
+          '100%': { transform: 'translateX(-100%)' },
+        }
+      },
+      animation: {
+        marquee: 'marquee 20s linear infinite',
+      }
     },
   },
   plugins: [],

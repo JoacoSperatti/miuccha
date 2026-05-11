@@ -33,7 +33,7 @@ const CatalogPage = ({ onAddToCart, onOpenSizeGuide }) => {
 
   return (
     <div className="pt-40 min-h-screen max-w-7xl mx-auto px-6 font-sans">
-      <h2 className="font-serif text-4xl text-center italic mb-12 uppercase tracking-widest">
+      <h2 className="font-sans text-3xl text-center mb-12 uppercase tracking-[0.2em] font-bold text-gray-900">
         Catálogo
       </h2>
       <div className="flex flex-wrap justify-center gap-4 mb-20">

@@ -8,7 +8,11 @@ const HomeHero = () => {
   const slides = [
     { id: 1, title: "COLECCIÓN 2026", img: "/banner1.jpg" },
     { id: 2, title: "100% CUERO", img: "/banner2.jpg" },
+    { id: 3, title: "DIRECTO DE FABRICA", img: "/banner3.jpg", textColor: "text-yellow-100" },
+    { id: 4, title: "", img: "/banner4.jpg" },
+    { id: 5, title: "", img: "/banner5.jpg" },
   ];
+
   return (
     <section className="relative w-full h-[75vh] md:h-[80vh] overflow-hidden z-0">
       <Swiper
@@ -28,10 +32,10 @@ const HomeHero = () => {
                 alt={s.title}
               />
               <div className="absolute inset-0 bg-black/25 flex flex-col items-center justify-center text-white text-center p-4">
-                <h2 className="font-serif text-5xl md:text-8xl mb-4 italic uppercase tracking-widest">
+                <h2 className={`font-serif text-5xl md:text-8xl mb-4 italic uppercase tracking-widest ${s.textColor || "text-white"}`}>
                   {s.title}
                 </h2>
-                <p className="text-[10px] uppercase tracking-[0.5em] font-bold font-sans">
+                <p className={`text-[10px] uppercase tracking-[0.5em] font-bold font-sans ${s.textColor || "text-white"}`}>
                   Diseño Independiente
                 </p>
               </div>

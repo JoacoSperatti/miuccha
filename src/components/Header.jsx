@@ -14,8 +14,10 @@ const Header = ({ cartCount, onCartClick }) => {
 
   return (
     <div className="fixed top-0 w-full z-50">
-      <div className="bg-black text-white text-[9px] text-center py-2 uppercase tracking-[0.2em] px-2 font-bold font-sans">
-        Envío gratis | Sólo transferencia y depósito | 100% Cuero
+      <div className="bg-black text-white text-[9px] py-2 uppercase tracking-[0.2em] font-bold font-sans overflow-hidden">
+        <div className="animate-marquee-css">
+          Envío gratis    |    Sólo transferencia y depósito    |    100% Cuero
+        </div>
       </div>
       <nav
         className={`bg-white/95 backdrop-blur-md border-b border-gray-100 px-6 flex justify-between items-center transition-all duration-500 ${isScrolled ? "py-2" : "py-6"}`}
@@ -75,9 +77,9 @@ const Header = ({ cartCount, onCartClick }) => {
         >
           <FaTimes size={25} />
         </button>
-        <div className="flex flex-col gap-8 text-center font-serif text-3xl italic">
+        <div className="flex flex-col gap-8 text-center font-sans text-2xl uppercase tracking-[0.2em] font-bold text-gray-900">
           <Link to="/catalogo" onClick={() => setIsMenuOpen(false)}>
-            Catalogo
+            Catálogo
           </Link>
           <a href="#informacion" onClick={() => setIsMenuOpen(false)}>
             Información

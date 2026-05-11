@@ -39,7 +39,7 @@ const CategoryGrid = () => {
             className="w-1/2 h-full object-contain transition-transform duration-500 group-hover:-translate-x-3 z-10"
             alt={cat.name}
           />
-          <h3 className="font-serif text-3xl md:text-5xl lg:text-6xl text-black uppercase z-10 tracking-tighter italic text-right leading-none">
+          <h3 className="font-sans text-2xl md:text-3xl lg:text-4xl text-black uppercase z-10 tracking-[0.2em] font-bold text-right leading-none">
             {cat.name}
           </h3>
         </div>
