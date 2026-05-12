@@ -26,40 +26,42 @@ const HomeHero = () => {
           pagination={{ clickable: true, dynamicBullets: true }}
           navigation={true}
           loop={true}
-          spaceBetween={16}
+          spaceBetween={-1}
           slidesPerView={1.2}
           breakpoints={{
             640: {
               slidesPerView: 2.2,
-              spaceBetween: 20,
+              spaceBetween: -1,
             },
             1024: {
               slidesPerView: 3.5,
-              spaceBetween: 30,
+              spaceBetween: -1,
             },
             1280: {
               slidesPerView: 4.2,
-              spaceBetween: 30,
+              spaceBetween: -1,
             },
           }}
           className="w-full pb-14"
         >
-          {slides.map((s) => (
+          {slides.map((s, index) => (
             <SwiperSlide key={s.id}>
-              <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden shadow-xl group cursor-pointer transition-all duration-500 hover:shadow-2xl">
+              <div className="relative w-full aspect-[4/5] overflow-hidden group cursor-pointer transition-all duration-500">
                 <img
                   src={s.img}
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                   alt={s.title}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-8">
-                  <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl mb-2 italic uppercase tracking-wider leading-tight text-yellow-100">
-                    {s.title}
-                  </h2>
-                  <p className="text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-medium font-sans text-yellow-100/80">
-                    Miuccha • {new Date().getFullYear()}
-                  </p>
-                </div>
+                {(index % 2 === 0 || s.title === "DIRECTO DE FABRICA") && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-8">
+                    <h2 className="font-sans text-2xl md:text-3xl lg:text-4xl mb-2 font-bold uppercase tracking-wider leading-tight text-yellow-100">
+                      {s.title}
+                    </h2>
+                    <p className="text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-medium font-sans text-yellow-100/80">
+                      Miuccha • {new Date().getFullYear()}
+                    </p>
+                  </div>
+                )}
               </div>
             </SwiperSlide>
           ))}
