@@ -6,15 +6,15 @@ import "swiper/css/navigation";
 
 const HomeHero = () => {
   const slides = [
-    { id: 1, title: "COLECCIÓN 2026", img: "/banner1.jpg" },
-    { id: 2, title: "100% CUERO", img: "/banner2.jpg" },
+    { id: 1, title: "ENVÍOS A TODO EL PAÍS", img: "/banner1.jpg" },
+    { id: 2, title: "", img: "/banner2.jpg" },
+    { id: 6, title: "", img: "/banner6.jpg" },
     { id: 3, title: "DIRECTO DE FABRICA", img: "/banner3.jpg" },
-    { id: 4, title: "ENVÍOS A TODO EL PAÍS", img: "/banner4.jpg" },
-    { id: 5, title: "NUEVA TEMPORADA", img: "/banner5.jpg" },
-    { id: 6, title: "HECHO A MANO", img: "/banner6.jpg" },
-    { id: 7, title: "CALIDAD PREMIUM", img: "/banner7.jpg" },
-    { id: 8, title: "MIUCCHA STYLE", img: "/banner8.jpg" },
-    { id: 9, title: "CONOCÉ MÁS", img: "/banner9.jpg" },
+    { id: 4, title: "", img: "/banner4.jpg" },
+    { id: 7, title: "", img: "/banner7.jpg" },
+    { id: 5, title: "HECHO A MANO", img: "/banner5.jpg" },
+    { id: 8, title: "", img: "/banner8.jpg" },
+    { id: 9, title: "", img: "/banner9.jpg" },
   ];
 
   return (
@@ -44,15 +44,15 @@ const HomeHero = () => {
           }}
           className="w-full pb-14"
         >
-          {slides.map((s, index) => (
+          {slides.map((s) => (
             <SwiperSlide key={s.id}>
               <div className="relative w-full aspect-[4/5] overflow-hidden group cursor-pointer transition-all duration-500">
                 <img
                   src={s.img}
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                  alt={s.title}
+                  alt={s.title || "Banner Miuccha"}
                 />
-                {(index % 2 === 0 || s.title === "DIRECTO DE FABRICA") && (
+                {s.title && (
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-8">
                     <h2 className="font-sans text-2xl md:text-3xl lg:text-4xl mb-2 font-bold uppercase tracking-wider leading-tight text-yellow-100">
                       {s.title}

@@ -1,6 +1,6 @@
 import Swal from "sweetalert2";
 
-export const TALLES = [22.5, 23, 24, 25, 22.5, 26];
+export const TALLES = [22.5, 23, 24, 25, 26];
 
 export const Toast = Swal.mixin({
   toast: true,
