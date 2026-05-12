@@ -30,7 +30,7 @@ const Home = ({ onAddToCart, onOpenSizeGuide }) => {
   return (
     <div className="pt-24 md:pt-32">
       <HomeHero />
-      <div className="relative z-[10] -mt-10 md:-mt-24">
+      <div className="relative z-[10]">
         <CategoryGrid />
       </div>
       <section className="py-24 px-6 max-w-7xl mx-auto text-center font-sans">
