@@ -15,6 +15,9 @@ const HomeHero = () => {
     { id: 5, title: "HECHO A MANO", img: "/banner5.jpg" },
     { id: 8, title: "", img: "/banner8.jpg" },
     { id: 9, title: "", img: "/banner9.jpg" },
+    { id: 10, title: "DISEÑO EXCLUSIVO", img: "/banner10.jpg" },
+    { id: 11, title: "", img: "/banner11.jpg" },
+    { id: 12, title: "", img: "/banner12.jpg" },
   ];
 
   return (
