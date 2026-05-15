@@ -26,14 +26,13 @@ const AdminPanel = () => {
   const [newProd, setNewProd] = useState({
     nombre: "",
     precio: "",
+    descripcion: "",
     categoria: "BOTAS",
     destacado: false,
-    img: "",
     colores: "",
-    galeria: [],
     stock: {},
+    fotosPorColor: {},
   });
-
   const fetchProducts = async () => {
     setLoading(true);
     const snap = await getDocs(collection(db, "productos"));
@@ -55,6 +54,7 @@ const AdminPanel = () => {
         ...editingData,
         colores: coloresArray,
         precio: parseInt(editingData.precio),
+        fotosPorColor: editingData.fotosPorColor || {},
       });
 
       setEditingId(null);
@@ -74,6 +74,7 @@ const AdminPanel = () => {
     setEditingData({
       ...p,
       colores: (p.colores || []).join(", "),
+      fotosPorColor: p.fotosPorColor || {},
     });
   };
 
@@ -130,81 +131,55 @@ const AdminPanel = () => {
     });
   };
 
-  const handleSingleFile = async (e, callback) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    const base64 = await processImage(file);
-    callback(base64);
-    setUploading(false);
-    e.target.value = "";
-    Toast.fire({ icon: "success", title: "Imagen principal cargada" });
-  };
-
-  const handleMultipleFiles = async (e, callback) => {
+  const handleColorFiles = async (e, color, isEditing) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     setUploading(true);
     const promises = files.map((file) => processImage(file));
     const base64Array = await Promise.all(promises);
-    callback(base64Array);
+    
+    if (isEditing) {
+      const updatedFotos = { ...(editingData.fotosPorColor || {}) };
+      updatedFotos[color] = [...(updatedFotos[color] || []), ...base64Array];
+      setEditingData({ ...editingData, fotosPorColor: updatedFotos });
+    } else {
+      const updatedFotos = { ...(newProd.fotosPorColor || {}) };
+      updatedFotos[color] = [...(updatedFotos[color] || []), ...base64Array];
+      setNewProd({ ...newProd, fotosPorColor: updatedFotos });
+    }
+    
     setUploading(false);
     e.target.value = "";
-    Toast.fire({ icon: "success", title: "Imágenes añadidas a la galería" });
+    Toast.fire({ icon: "success", title: `Fotos añadidas para el color ${color}` });
   };
 
-  const handleDeleteImage = async (id, type, index = null) => {
-    const isEditing = editingId === id;
-    const p = isEditing ? editingData : products.find((prod) => prod.id === id);
-    if (!p) return;
-
-    try {
-      let updatedImg = p.img;
-      let updatedGaleria = [...(p.galeria || [])];
-
-      if (type === "main") {
-        if (updatedGaleria.length > 0) {
-          updatedImg = updatedGaleria[0];
-          updatedGaleria = updatedGaleria.slice(1);
-        } else {
-          updatedImg = "";
-        }
-      } else {
-        updatedGaleria = updatedGaleria.filter((_, i) => i !== index);
-      }
-
-      if (isEditing) {
-        setEditingData({ ...editingData, img: updatedImg, galeria: updatedGaleria });
-        Toast.fire({ icon: "info", title: "Imagen removida localmente" });
-      } else {
-        await updateDoc(doc(db, "productos", id), {
-          img: updatedImg,
-          galeria: updatedGaleria,
-        });
-        fetchProducts();
-        Toast.fire({ icon: "info", title: "Imagen eliminada" });
-      }
-    } catch (e) {
-      console.error(e);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo eliminar la imagen",
-      });
+  const handleDeleteColorImage = (color, index, isEditing) => {
+    if (isEditing) {
+      const updatedFotos = { ...(editingData.fotosPorColor || {}) };
+      updatedFotos[color] = updatedFotos[color].filter((_, i) => i !== index);
+      setEditingData({ ...editingData, fotosPorColor: updatedFotos });
+    } else {
+      const updatedFotos = { ...(newProd.fotosPorColor || {}) };
+      updatedFotos[color] = updatedFotos[color].filter((_, i) => i !== index);
+      setNewProd({ ...newProd, fotosPorColor: updatedFotos });
     }
+    Toast.fire({ icon: "info", title: "Imagen de color removida" });
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!newProd.img) {
+    
+    const colorsWithPhotos = Object.values(newProd.fotosPorColor || {}).some(arr => arr && arr.length > 0);
+    if (!colorsWithPhotos) {
       Swal.fire({
         icon: "warning",
-        title: "Falta la imagen principal",
-        text: "Por favor seleccioná una portada para el producto.",
+        title: "Faltan imágenes",
+        text: "Por favor cargá al menos una foto en alguno de los colores.",
         confirmButtonColor: "#000",
       });
       return;
     }
+
     try {
       const coloresArray = newProd.colores
         .split(",")
@@ -235,12 +210,12 @@ const AdminPanel = () => {
       setNewProd({
         nombre: "",
         precio: "",
+        descripcion: "",
         categoria: "BOTAS",
         destacado: false,
-        img: "",
         colores: "",
-        galeria: [],
         stock: {},
+        fotosPorColor: {},
       });
       fetchProducts();
     } catch (e) {
@@ -367,9 +342,6 @@ const AdminPanel = () => {
         </div>
       </div>
 
-      {/* FORMULARIO NUEVO PRODUCTO */}
-      {/* ... (rest of the code remains similar but I will update the list below) ... */}
-
       <form
         onSubmit={handleCreate}
         className="bg-white p-8 rounded-xl shadow-lg mb-16 border grid grid-cols-1 md:grid-cols-3 gap-6"
@@ -422,6 +394,18 @@ const AdminPanel = () => {
           </select>
         </div>
 
+        <div className="col-span-full flex flex-col gap-1">
+          <label className="text-[9px] uppercase tracking-widest font-bold text-gray-500">
+            Descripción
+          </label>
+          <textarea
+            className="p-3 border text-sm focus:outline-none focus:border-black min-h-[100px]"
+            value={newProd.descripcion}
+            onChange={(e) => setNewProd({ ...newProd, descripcion: e.target.value })}
+            placeholder="Escribí una descripción detallada del producto..."
+          />
+        </div>
+
         <div className="flex flex-col gap-1">
           <label className="text-[9px] uppercase tracking-widest font-bold text-gray-500">
             Colores Disponibles (Opcional)
@@ -437,104 +421,56 @@ const AdminPanel = () => {
           />
         </div>
 
-        <div className="md:col-span-2 flex flex-col gap-2 p-4 border bg-gray-50 rounded">
-          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest border-b pb-2 mb-2">
-            Imágenes del producto
-          </span>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <label className="text-[9px] uppercase font-bold text-gray-400 mb-1 block">
-                Foto Principal (Portada)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                className="text-xs w-full bg-white p-2 border"
-                onChange={(e) =>
-                  handleSingleFile(e, (base64) =>
-                    setNewProd({ ...newProd, img: base64 }),
-                  )
-                }
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-[9px] uppercase font-bold text-gray-400 mb-1 block">
-                Fotos Extras (Galería)
-              </label>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                className="text-xs w-full bg-white p-2 border"
-                onChange={(e) =>
-                  handleMultipleFiles(e, (base64Array) =>
-                    setNewProd({
-                      ...newProd,
-                      galeria: [...newProd.galeria, ...base64Array],
-                    }),
-                  )
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* PREVISUALIZACIÓN DE IMÁGENES AL CREAR */}
-        {(newProd.img || newProd.galeria.length > 0) && (
-          <div className="col-span-full p-4 border bg-gray-50 rounded flex flex-wrap gap-4 items-center">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-full border-b pb-2 mb-2">
-              Previsualización
-            </span>
-            {newProd.img && (
-              <div className="relative w-20 h-28 group">
-                <img
-                  src={newProd.img}
-                  className="w-full h-full object-cover border-2 border-black"
-                  alt="Portada"
-                />
-                <span className="absolute bottom-0 inset-x-0 bg-black/80 text-white text-[7px] text-center font-bold py-1">
-                  PORTADA
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setNewProd({ ...newProd, img: "" })}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg hover:scale-110"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-            {newProd.galeria.map((img, idx) => (
-              <div key={idx} className="relative w-20 h-28 group">
-                <img
-                  src={img}
-                  className="w-full h-full object-cover border"
-                  alt="Galeria"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newGal = newProd.galeria.filter((_, i) => i !== idx);
-                    setNewProd({ ...newProd, galeria: newGal });
-                  }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg hover:scale-110"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
         <div className="col-span-full flex flex-col gap-4 mt-4">
           <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest border-b pb-2">
-            Stock Inicial por Talle
+            Stock y Fotos por Color
           </span>
           {coloresFormRender.map((color) => (
-            <div key={color} className="bg-gray-50 p-4 border rounded">
-              <span className="text-[10px] font-bold uppercase mb-3 block">
-                Color: {color}
-              </span>
+            <div key={color} className="bg-gray-50 p-4 border rounded space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold uppercase">
+                  Color: {color}
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    id={`new-color-img-${color}`}
+                    className="hidden"
+                    onChange={(e) => handleColorFiles(e, color, false)}
+                  />
+                  <label
+                    htmlFor={`new-color-img-${color}`}
+                    className="text-[8px] bg-black text-white px-3 py-1 rounded cursor-pointer uppercase font-bold hover:bg-gray-800"
+                  >
+                    + Fotos para este color
+                  </label>
+                </div>
+              </div>
+
+              {/* Previsualización fotos color */}
+              {newProd.fotosPorColor?.[color]?.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">
+                  {newProd.fotosPorColor[color].map((img, idx) => (
+                    <div key={idx} className="relative w-16 h-20 group">
+                      <img
+                        src={img}
+                        className="w-full h-full object-cover border rounded"
+                        alt={`Foto ${color}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteColorImage(color, idx, false)}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] shadow-lg"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="grid grid-cols-6 gap-2">
                 {TALLES.map((talle) => (
                   <div
@@ -592,7 +528,6 @@ const AdminPanel = () => {
         </div>
       </form>
 
-      {/* LISTADO DE PRODUCTOS EXISTENTES */}
       <h3 className="font-serif text-2xl mb-6 italic">Catálogo Actual</h3>
       <div className="space-y-8">
         {filteredProducts.map((p) => {
@@ -625,87 +560,24 @@ const AdminPanel = () => {
               )}
 
               <div className="w-full md:w-1/4 flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2 p-3 border bg-gray-50 rounded-lg min-h-[160px]">
-                  <div className="relative w-24 h-32 group">
-                    <img
-                      src={data.img}
-                      className="w-full h-full object-cover border-2 border-black rounded shadow-md"
-                      alt="Portada"
-                    />
-                    <span className="absolute bottom-0 inset-x-0 bg-black/80 text-white text-[7px] text-center font-bold py-1">
-                      PORTADA
-                    </span>
-                    {isEditing && (
-                      <button
-                        onClick={() => handleDeleteImage(p.id, "main")}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                  {(data.galeria || []).map((img, idx) => (
-                    <div key={idx} className="relative w-24 h-32 group">
+                <div className="flex flex-wrap gap-2 p-3 border bg-gray-50 rounded-lg min-h-[160px] justify-center items-center">
+                  {Object.values(data.fotosPorColor || {}).flat()[0] ? (
+                    <div className="relative w-32 h-44 group">
                       <img
-                        src={img}
-                        className="w-full h-full object-cover border rounded shadow-sm"
-                        alt="Galeria"
+                        src={Object.values(data.fotosPorColor || {}).flat()[0]}
+                        className="w-full h-full object-cover border-2 border-black rounded shadow-md"
+                        alt="Miniatura"
                       />
-                      {isEditing && (
-                        <button
-                          onClick={() => handleDeleteImage(p.id, "galeria", idx)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg"
-                        >
-                          ✕
-                        </button>
-                      )}
+                      <span className="absolute bottom-0 inset-x-0 bg-black/80 text-white text-[7px] text-center font-bold py-1 uppercase tracking-widest">
+                        Miniatura
+                      </span>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="w-32 h-44 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center p-4 text-center">
+                      <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Sin imágenes</span>
+                    </div>
+                  )}
                 </div>
-
-                {isEditing && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id={`main-${p.id}`}
-                      className="hidden"
-                      onChange={(e) =>
-                        handleSingleFile(e, (base64) =>
-                          setEditingData({ ...editingData, img: base64 })
-                        )
-                      }
-                    />
-                    <label
-                      htmlFor={`main-${p.id}`}
-                      className="text-[8px] border border-gray-300 py-3 text-center cursor-pointer hover:bg-black hover:text-white font-bold uppercase transition-all rounded"
-                    >
-                      {uploading ? "..." : "Portada"}
-                    </label>
-
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      id={`gal-${p.id}`}
-                      className="hidden"
-                      onChange={(e) =>
-                        handleMultipleFiles(e, (base64Arr) =>
-                          setEditingData({
-                            ...editingData,
-                            galeria: [...(editingData.galeria || []), ...base64Arr],
-                          })
-                        )
-                      }
-                    />
-                    <label
-                      htmlFor={`gal-${p.id}`}
-                      className="text-[8px] bg-black text-white py-3 text-center cursor-pointer hover:bg-gray-800 font-bold uppercase transition-all rounded"
-                    >
-                      {uploading ? "..." : "+ Fotos"}
-                    </label>
-                  </div>
-                )}
               </div>
 
               <div className="flex-grow grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -748,7 +620,7 @@ const AdminPanel = () => {
                         value={data.precio}
                         disabled={!isEditing}
                         onChange={(e) => setEditingData({...editingData, precio: e.target.value})}
-                        className={`w-full font-bold border-b pb-1 focus:outline-none focus:border-black text-xl bg-transparent ${isEditing ? 'border-gray-300' : 'border-transparent'}`}
+                        className={`w-full font-bold border-b pb-1 focus:outline-none focus:border-black text-xl bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isEditing ? 'border-gray-300' : 'border-transparent'}`}
                       />
                     </div>
                   </div>
@@ -764,6 +636,19 @@ const AdminPanel = () => {
                       disabled={!isEditing}
                       onChange={(e) => setEditingData({...editingData, colores: e.target.value})}
                       className={`w-full text-sm border-b pb-1 focus:outline-none focus:border-black bg-transparent ${isEditing ? 'border-gray-300' : 'border-transparent'}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[8px] uppercase tracking-[0.2em] font-bold text-gray-400">
+                      Descripción
+                    </label>
+                    <textarea
+                      value={data.descripcion || ""}
+                      disabled={!isEditing}
+                      onChange={(e) => setEditingData({...editingData, descripcion: e.target.value})}
+                      className={`w-full text-sm border p-2 focus:outline-none focus:border-black bg-transparent min-h-[100px] ${isEditing ? 'border-gray-300' : 'border-transparent'}`}
+                      placeholder="Sin descripción"
                     />
                   </div>
 
@@ -783,17 +668,63 @@ const AdminPanel = () => {
 
                 <div className="bg-gray-50 p-6 border rounded-xl space-y-4">
                   <label className="text-[9px] uppercase tracking-[0.3em] font-bold text-gray-500 block text-center border-b pb-3">
-                    Gestión de Stock
+                    Gestión de Stock y Fotos
                   </label>
-                  <div className="max-h-[300px] overflow-y-auto pr-2 space-y-6">
+                  <div className="max-h-[400px] overflow-y-auto pr-2 space-y-6">
                     {displayColores.map((color) => {
                       const colorStock = isFlat ? data.stock : data.stock?.[color] || {};
+                      const colorFotos = data.fotosPorColor?.[color] || [];
+
                       return (
-                        <div key={color} className="space-y-2">
-                          <span className="text-[10px] font-bold uppercase text-black flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-black"></span>
-                            {color}
-                          </span>
+                        <div key={color} className="space-y-3 p-3 border border-gray-200 rounded-lg bg-white/50">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold uppercase text-black flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-black"></span>
+                              {color}
+                            </span>
+                            {isEditing && (
+                              <div>
+                                <input
+                                  type="file"
+                                  multiple
+                                  accept="image/*"
+                                  id={`edit-color-img-${color}-${p.id}`}
+                                  className="hidden"
+                                  onChange={(e) => handleColorFiles(e, color, true)}
+                                />
+                                <label
+                                  htmlFor={`edit-color-img-${color}-${p.id}`}
+                                  className="text-[8px] bg-black text-white px-2 py-1 rounded cursor-pointer font-bold"
+                                >
+                                  + Fotos
+                                </label>
+                              </div>
+                            )}
+                          </div>
+
+                          {colorFotos.length > 0 && (
+                            <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">
+                              {colorFotos.map((img, idx) => (
+                                <div key={idx} className="relative w-14 h-18 group">
+                                  <img
+                                    src={img}
+                                    className="w-full h-full object-cover border rounded shadow-sm"
+                                    alt={`${color}-${idx}`}
+                                  />
+                                  {isEditing && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteColorImage(color, idx, true)}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] shadow-lg"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           <div className="grid grid-cols-6 gap-2">
                             {TALLES.map((talle) => (
                               <div
