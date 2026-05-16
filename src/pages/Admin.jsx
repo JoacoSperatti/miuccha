@@ -85,7 +85,7 @@ const AdminPanel = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (passwordInput === "miuccha2026") {
+    if (passwordInput === import.meta.env.VITE_ADMIN_PASSWORD) {
       setAuthorized(true);
       fetchProducts();
       Toast.fire({ icon: "success", title: "Acceso concedido" });
