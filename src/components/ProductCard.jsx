@@ -37,6 +37,8 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
   const isFlatStock = product.stock && typeof product.stock[TALLES[0]] === 'number';
   const currentStock = isFlatStock ? (product.stock || {}) : (product.stock?.[selectedColor] || {});
 
+  const currentDescription = product.descripcionesPorColor?.[selectedColor] || product.descripcion;
+
   const canAdd = selectedSize && images.length > 0;
 
   const nextImg = (e) => {
@@ -136,15 +138,18 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
               <h3 className="font-serif text-3xl mb-4 text-gray-900 italic tracking-wide">
                 {product.nombre}
               </h3>
+              <div className="bg-black text-white text-[9px] py-2 px-4 inline-block mb-4 font-bold tracking-widest uppercase">
+                SOLO TRANSFERENCIA/DEPOSITO
+              </div>
               <p className="font-bold text-2xl text-gray-800 mb-6 tracking-tighter font-sans">
                 ${product.precio?.toLocaleString()}
               </p>
 
-              {product.descripcion && (
+              {currentDescription && (
                 <div className="mb-8 border-t pt-6">
                   <h5 className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">Descripción</h5>
                   <p className="text-xs leading-relaxed text-gray-600 font-sans whitespace-pre-wrap">
-                    {renderDescription(product.descripcion)}
+                    {renderDescription(currentDescription)}
                   </p>
                 </div>
               )}
@@ -250,13 +255,16 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
         <h3 className="font-serif text-lg mb-2 text-gray-900 italic tracking-wide">
           {product.nombre}
         </h3>
+        <div className="bg-black text-white text-[8px] py-1.5 px-3 inline-block mb-3 font-bold tracking-widest uppercase">
+          SOLO TRANSFERENCIA/DEPOSITO
+        </div>
         <p className="font-bold text-gray-800 mb-2 tracking-tighter font-sans">
           ${product.precio?.toLocaleString()}
         </p>
 
-        {product.descripcion && (
+        {currentDescription && (
           <p className="text-[10px] text-gray-400 mb-4 line-clamp-2 px-4 italic font-sans">
-            {product.descripcion}
+            {currentDescription}
           </p>
         )}
       </div>

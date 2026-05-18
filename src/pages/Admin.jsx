@@ -32,6 +32,7 @@ const AdminPanel = () => {
     colores: "",
     stock: {},
     fotosPorColor: {},
+    descripcionesPorColor: {},
   });
   const fetchProducts = async () => {
     setLoading(true);
@@ -55,6 +56,7 @@ const AdminPanel = () => {
         colores: coloresArray,
         precio: parseInt(editingData.precio),
         fotosPorColor: editingData.fotosPorColor || {},
+        descripcionesPorColor: editingData.descripcionesPorColor || {},
       });
 
       setEditingId(null);
@@ -75,6 +77,7 @@ const AdminPanel = () => {
       ...p,
       colores: (p.colores || []).join(", "),
       fotosPorColor: p.fotosPorColor || {},
+      descripcionesPorColor: p.descripcionesPorColor || {},
     });
   };
 
@@ -200,6 +203,7 @@ const AdminPanel = () => {
         colores: coloresArray,
         stock: finalStock,
         precio: parseInt(newProd.precio),
+        descripcionesPorColor: newProd.descripcionesPorColor || {},
       });
       Swal.fire({
         icon: "success",
@@ -216,6 +220,7 @@ const AdminPanel = () => {
         colores: "",
         stock: {},
         fotosPorColor: {},
+        descripcionesPorColor: {},
       });
       fetchProducts();
     } catch (e) {
@@ -447,6 +452,26 @@ const AdminPanel = () => {
                     + Fotos para este color
                   </label>
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
+                  Descripción específica para este color
+                </label>
+                <textarea
+                  className="p-2 border text-xs focus:outline-none focus:border-black min-h-[60px] bg-white"
+                  value={newProd.descripcionesPorColor?.[color] || ""}
+                  onChange={(e) =>
+                    setNewProd({
+                      ...newProd,
+                      descripcionesPorColor: {
+                        ...newProd.descripcionesPorColor,
+                        [color]: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="Si se deja vacío, se usará la descripción general..."
+                />
               </div>
 
               {/* Previsualización fotos color */}
@@ -701,6 +726,28 @@ const AdminPanel = () => {
                               </div>
                             )}
                           </div>
+
+                          {isEditing && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[8px] uppercase tracking-widest font-bold text-gray-400">
+                                Descripción específica
+                              </label>
+                              <textarea
+                                className="p-2 border text-[10px] focus:outline-none focus:border-black min-h-[50px] bg-white"
+                                value={data.descripcionesPorColor?.[color] || ""}
+                                onChange={(e) => {
+                                  setEditingData({
+                                    ...editingData,
+                                    descripcionesPorColor: {
+                                      ...(editingData.descripcionesPorColor || {}),
+                                      [color]: e.target.value,
+                                    },
+                                  });
+                                }}
+                                placeholder="Usar descripción general..."
+                              />
+                            </div>
+                          )}
 
                           {colorFotos.length > 0 && (
                             <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">

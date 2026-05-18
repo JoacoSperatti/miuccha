@@ -1,16 +1,23 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { FaBars, FaTimes, FaShoppingBag } from "react-icons/fa";
 
 const Header = ({ cartCount, onCartClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleLogoClick = (e) => {
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <div className="fixed top-0 w-full z-50">
@@ -43,12 +50,12 @@ const Header = ({ cartCount, onCartClick }) => {
           </button>
         </div>
         <div className="w-1/3 text-center">
-          <Link to="/">
-            <h1
-              className={`font-serif tracking-[0.2em] text-gray-900 italic transition-all duration-500 ${isScrolled ? "text-xl" : "text-3xl"}`}
-            >
-              MIUCCHA
-            </h1>
+          <Link to="/" onClick={handleLogoClick}>
+            <img
+              src="/MIUCCHA.jpg"
+              alt="MIUCCHA"
+              className={`mx-auto transition-all duration-500 ${isScrolled ? "h-16" : "h-32"}`}
+            />
           </Link>
         </div>
         <div className="w-1/3 flex justify-end font-sans">
