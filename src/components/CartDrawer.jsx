@@ -139,7 +139,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
                     />
                     <div className="flex-grow flex flex-col justify-between py-1">
                       <div>
-                        <h4 className="font-serif text-lg leading-tight text-gray-900">
+                        <h4 className="font-sans text-[11px] leading-tight text-gray-900 uppercase tracking-widest font-bold">
                           {item.nombre}
                         </h4>
                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mt-1">

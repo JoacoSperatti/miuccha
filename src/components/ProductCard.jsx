@@ -135,7 +135,7 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
               <h4 className="text-[10px] text-gray-400 uppercase tracking-[0.3em] mb-2 font-sans font-bold">
                 {product.categoria}
               </h4>
-              <h3 className="font-serif text-3xl mb-4 text-gray-900 italic tracking-wide">
+              <h3 className="font-sans text-xl md:text-2xl mb-4 text-gray-900 uppercase tracking-[0.1em] font-bold">
                 {product.nombre}
               </h3>
               <div className="bg-black text-white text-[9px] py-2 px-4 inline-block mb-4 font-bold tracking-widest uppercase">
@@ -252,7 +252,7 @@ const ProductCard = ({ product, onAddToCart, onOpenSizeGuide }) => {
         <h4 className="text-[9px] text-gray-400 uppercase tracking-widest mb-1 font-sans font-bold">
           {product.categoria}
         </h4>
-        <h3 className="font-serif text-lg mb-2 text-gray-900 italic tracking-wide">
+        <h3 className="font-sans text-sm mb-2 text-gray-900 uppercase tracking-[0.1em] font-bold">
           {product.nombre}
         </h3>
         <div className="bg-black text-white text-[8px] py-1.5 px-3 inline-block mb-3 font-bold tracking-widest uppercase">
