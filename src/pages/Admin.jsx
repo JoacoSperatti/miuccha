@@ -9,9 +9,11 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { FaTrash } from "react-icons/fa";
+import { FaTrash, FaArrowUp, FaArrowDown, FaStar, FaEye } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { Toast, TALLES } from "../constants/constants";
+import ImageCropper from "../components/ImageCropper";
+import ProductCard from "../components/ProductCard";
 
 const AdminPanel = () => {
   const [products, setProducts] = useState([]);
@@ -23,6 +25,13 @@ const AdminPanel = () => {
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState(null);
+  const [showPreview, setShowPreview] = useState(null);
+  
+  // Cropping state
+  const [cropQueue, setCropQueue] = useState([]);
+  const [currentCropColor, setCurrentCropColor] = useState(null);
+  const [isEditingCrop, setIsEditingCrop] = useState(false);
+
   const [newProd, setNewProd] = useState({
     nombre: "",
     precio: "",
@@ -34,6 +43,7 @@ const AdminPanel = () => {
     fotosPorColor: {},
     descripcionesPorColor: {},
   });
+
   const fetchProducts = async () => {
     setLoading(true);
     const snap = await getDocs(collection(db, "productos"));
@@ -103,57 +113,47 @@ const AdminPanel = () => {
     }
   };
 
-  const processImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-          const MAX_SIZE = 800;
-
-          if (width > height && width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
-            width = MAX_SIZE;
-          } else if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
-            height = MAX_SIZE;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", 0.7));
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleColorFiles = async (e, color, isEditing) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    setUploading(true);
-    const promises = files.map((file) => processImage(file));
-    const base64Array = await Promise.all(promises);
     
-    if (isEditing) {
+    const fileReaders = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    const base64Files = await Promise.all(fileReaders);
+    setCropQueue(base64Files);
+    setCurrentCropColor(color);
+    setIsEditingCrop(isEditing);
+    e.target.value = "";
+  };
+
+  const onCropComplete = (croppedImage) => {
+    if (isEditingCrop) {
       const updatedFotos = { ...(editingData.fotosPorColor || {}) };
-      updatedFotos[color] = [...(updatedFotos[color] || []), ...base64Array];
+      updatedFotos[currentCropColor] = [...(updatedFotos[currentCropColor] || []), croppedImage];
       setEditingData({ ...editingData, fotosPorColor: updatedFotos });
     } else {
       const updatedFotos = { ...(newProd.fotosPorColor || {}) };
-      updatedFotos[color] = [...(updatedFotos[color] || []), ...base64Array];
+      updatedFotos[currentCropColor] = [...(updatedFotos[currentCropColor] || []), croppedImage];
       setNewProd({ ...newProd, fotosPorColor: updatedFotos });
     }
-    
-    setUploading(false);
-    e.target.value = "";
-    Toast.fire({ icon: "success", title: `Fotos añadidas para el color ${color}` });
+
+    const nextQueue = cropQueue.slice(1);
+    setCropQueue(nextQueue);
+    if (nextQueue.length === 0) {
+      setCurrentCropColor(null);
+      Toast.fire({ icon: "success", title: "Fotos procesadas con éxito" });
+    }
+  };
+
+  const onCropCancel = () => {
+    setCropQueue([]);
+    setCurrentCropColor(null);
   };
 
   const handleDeleteColorImage = (color, index, isEditing) => {
@@ -166,7 +166,37 @@ const AdminPanel = () => {
       updatedFotos[color] = updatedFotos[color].filter((_, i) => i !== index);
       setNewProd({ ...newProd, fotosPorColor: updatedFotos });
     }
-    Toast.fire({ icon: "info", title: "Imagen de color removida" });
+    Toast.fire({ icon: "info", title: "Imagen removida" });
+  };
+
+  const moveImage = (color, index, direction, isEditing) => {
+    const data = isEditing ? editingData : newProd;
+    const setter = isEditing ? setEditingData : setNewProd;
+    
+    const photos = [...(data.fotosPorColor[color] || [])];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (newIndex >= 0 && newIndex < photos.length) {
+      const temp = photos[index];
+      photos[index] = photos[newIndex];
+      photos[newIndex] = temp;
+      
+      const updatedFotos = { ...data.fotosPorColor, [color]: photos };
+      setter({ ...data, fotosPorColor: updatedFotos });
+    }
+  };
+
+  const setAsMainImage = (color, index, isEditing) => {
+    const data = isEditing ? editingData : newProd;
+    const setter = isEditing ? setEditingData : setNewProd;
+    
+    const photos = [...(data.fotosPorColor[color] || [])];
+    const mainPhoto = photos.splice(index, 1)[0];
+    photos.unshift(mainPhoto);
+    
+    const updatedFotos = { ...data.fotosPorColor, [color]: photos };
+    setter({ ...data, fotosPorColor: updatedFotos });
+    Toast.fire({ icon: "success", title: "Imagen establecida como principal" });
   };
 
   const handleCreate = async (e) => {
@@ -318,6 +348,32 @@ const AdminPanel = () => {
 
   return (
     <div className="pt-40 px-6 max-w-6xl mx-auto mb-20 font-sans">
+      {/* Image Cropper Modal */}
+      {cropQueue.length > 0 && (
+        <ImageCropper 
+          image={cropQueue[0]} 
+          onCropComplete={onCropComplete} 
+          onCancel={onCropCancel} 
+        />
+      )}
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-[150] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowPreview(null)}>
+          <div className="bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-sm relative" onClick={e => e.stopPropagation()}>
+            <button className="absolute top-4 right-4 z-[160] text-black text-xl" onClick={() => setShowPreview(null)}>✕</button>
+            <div className="p-4">
+              <h3 className="text-center font-serif italic mb-6 text-gray-400">Vista Previa de Producto</h3>
+              <ProductCard 
+                product={showPreview} 
+                onAddToCart={() => {}} 
+                onOpenSizeGuide={() => {}} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-8 gap-4">
         <h2 className="font-serif text-3xl italic tracking-widest uppercase">
           Panel de Control
@@ -449,7 +505,7 @@ const AdminPanel = () => {
                     htmlFor={`new-color-img-${color}`}
                     className="text-[8px] bg-black text-white px-3 py-1 rounded cursor-pointer uppercase font-bold hover:bg-gray-800"
                   >
-                    + Fotos para este color
+                    + Agregar y Recortar Fotos
                   </label>
                 </div>
               </div>
@@ -476,21 +532,53 @@ const AdminPanel = () => {
 
               {/* Previsualización fotos color */}
               {newProd.fotosPorColor?.[color]?.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">
+                <div className="flex flex-wrap gap-4 p-4 bg-white border rounded">
                   {newProd.fotosPorColor[color].map((img, idx) => (
-                    <div key={idx} className="relative w-16 h-20 group">
+                    <div key={idx} className="relative w-24 h-32 group">
                       <img
                         src={img}
-                        className="w-full h-full object-cover border rounded"
+                        className={`w-full h-full object-cover border rounded ${idx === 0 ? 'ring-2 ring-black' : ''}`}
                         alt={`Foto ${color}`}
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteColorImage(color, idx, false)}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] shadow-lg"
-                      >
-                        ✕
-                      </button>
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveImage(color, idx, 'up', false)}
+                            disabled={idx === 0}
+                            className="bg-white p-1 rounded-full text-black disabled:opacity-30"
+                          >
+                            <FaArrowUp size={10} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveImage(color, idx, 'down', false)}
+                            disabled={idx === newProd.fotosPorColor[color].length - 1}
+                            className="bg-white p-1 rounded-full text-black disabled:opacity-30"
+                          >
+                            <FaArrowDown size={10} />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAsMainImage(color, idx, false)}
+                          className={`p-1 rounded-full ${idx === 0 ? 'bg-yellow-400 text-white' : 'bg-white text-gray-400'}`}
+                        >
+                          <FaStar size={10} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteColorImage(color, idx, false)}
+                          className="bg-red-500 text-white p-1 rounded-full"
+                        >
+                          <FaTrash size={10} />
+                        </button>
+                      </div>
+                      {idx === 0 && (
+                        <span className="absolute -top-2 -left-2 bg-black text-white text-[6px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter z-10">
+                          Principal
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -545,7 +633,7 @@ const AdminPanel = () => {
           </label>
           <button
             type="submit"
-            disabled={uploading}
+            disabled={uploading || cropQueue.length > 0}
             className="bg-black text-white px-10 py-4 uppercase text-[10px] tracking-[0.2em] font-bold disabled:bg-gray-400 hover:bg-gray-800 transition-colors shadow-lg"
           >
             {uploading ? "Procesando..." : "Guardar Producto"}
@@ -569,6 +657,12 @@ const AdminPanel = () => {
             >
               {!isEditing && (
                 <div className="absolute top-4 right-4 flex gap-2">
+                  <button
+                    onClick={() => setShowPreview(p)}
+                    className="text-[10px] bg-white border border-black px-3 py-1 rounded-full font-bold hover:bg-black hover:text-white transition-all uppercase tracking-widest flex items-center gap-2"
+                  >
+                    <FaEye /> Vista Previa
+                  </button>
                   <button
                     onClick={() => startEditing(p)}
                     className="text-[10px] bg-gray-100 px-3 py-1 rounded-full font-bold hover:bg-black hover:text-white transition-all uppercase tracking-widest"
@@ -721,7 +815,7 @@ const AdminPanel = () => {
                                   htmlFor={`edit-color-img-${color}-${p.id}`}
                                   className="text-[8px] bg-black text-white px-2 py-1 rounded cursor-pointer font-bold"
                                 >
-                                  + Fotos
+                                  + Agregar y Recortar
                                 </label>
                               </div>
                             )}
@@ -750,22 +844,54 @@ const AdminPanel = () => {
                           )}
 
                           {colorFotos.length > 0 && (
-                            <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">
+                            <div className="flex flex-wrap gap-3 p-3 bg-white border rounded">
                               {colorFotos.map((img, idx) => (
-                                <div key={idx} className="relative w-14 h-18 group">
+                                <div key={idx} className="relative w-16 h-20 group">
                                   <img
                                     src={img}
-                                    className="w-full h-full object-cover border rounded shadow-sm"
+                                    className={`w-full h-full object-cover border rounded shadow-sm ${idx === 0 ? 'ring-1 ring-black' : ''}`}
                                     alt={`${color}-${idx}`}
                                   />
                                   {isEditing && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteColorImage(color, idx, true)}
-                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] shadow-lg"
-                                    >
-                                      ✕
-                                    </button>
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-0.5">
+                                      <div className="flex gap-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => moveImage(color, idx, 'up', true)}
+                                          disabled={idx === 0}
+                                          className="bg-white p-0.5 rounded-full text-black disabled:opacity-30"
+                                        >
+                                          <FaArrowUp size={8} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => moveImage(color, idx, 'down', true)}
+                                          disabled={idx === colorFotos.length - 1}
+                                          className="bg-white p-0.5 rounded-full text-black disabled:opacity-30"
+                                        >
+                                          <FaArrowDown size={8} />
+                                        </button>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => setAsMainImage(color, idx, true)}
+                                        className={`p-0.5 rounded-full ${idx === 0 ? 'bg-yellow-400 text-white' : 'bg-white text-gray-400'}`}
+                                      >
+                                        <FaStar size={8} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteColorImage(color, idx, true)}
+                                        className="bg-red-500 text-white p-0.5 rounded-full"
+                                      >
+                                        <FaTrash size={8} />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {idx === 0 && (
+                                    <span className="absolute -top-1 -left-1 bg-black text-white text-[5px] font-bold px-1 rounded uppercase z-10">
+                                      Principal
+                                    </span>
                                   )}
                                 </div>
                               ))}
@@ -817,7 +943,7 @@ const AdminPanel = () => {
                     </button>
                     <button
                       onClick={() => handleUpdate(p.id)}
-                      disabled={uploading}
+                      disabled={uploading || cropQueue.length > 0}
                       className="bg-black text-white px-8 py-3 text-[10px] font-bold uppercase tracking-[0.2em] rounded shadow-lg hover:bg-gray-800 disabled:bg-gray-400 transition-all"
                     >
                       {uploading ? "Guardando..." : "Guardar Cambios"}
