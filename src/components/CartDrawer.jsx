@@ -75,9 +75,9 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart }) => {
         .join("\n");
 
       const datosPago =
-        "ALIAS: zona.cansar.ropa.mp\nCBU: 0000003100106194229026\nTitular: Gas Fe Srl";
+        "ALIAS: zona.cansar.ropa.mp\nCBU: 0000003100106194229026\nTitular: Gas Fe Srl\n*(Para cerrar operación compra es necesario Comprobante de transferencia)*";
 
-      const mensajeCuerpo = `Hola Miuccha! *ORDEN DE COMPRA #${orderNumber}*\n\n*DATOS DE ENVÍO:*\nNombre: ${userData.nombre}\nDirección: ${userData.direccion}\nLocalidad: ${userData.localidad}\nCP: ${userData.cp}\n\n*PEDIDO:*\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n*(ADVERTENCIA, por deposito bancario consultar en el momento) DATOS PARA TRANSFERENCIA:*\n${datosPago}\n\n(Envío el comprobante por acá ni bien realice el pago)`;
+      const mensajeCuerpo = `Hola Miuccha! *ORDEN DE COMPRA #${orderNumber}*\n\n*DATOS DE ENVÍO:*\n*Solo Envío Correo Argentino a Sucursal*\nNombre: ${userData.nombre}\nDirección: ${userData.direccion}\nLocalidad: ${userData.localidad}\nCP: ${userData.cp}\n\n*PEDIDO:*\n${productosTxt}\n\n*Total: $${total.toLocaleString()}*\n\n*(ADVERTENCIA, por deposito bancario consultar en el momento) DATOS PARA TRANSFERENCIA:*\n${datosPago}`;
 
       const mensajeCodificado = encodeURIComponent(mensajeCuerpo);
       const whatsappUrl = `https://wa.me/5491165283561?text=${mensajeCodificado}`;
