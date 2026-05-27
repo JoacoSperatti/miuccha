@@ -9,7 +9,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { FaTrash, FaArrowUp, FaArrowDown, FaStar, FaEye } from "react-icons/fa";
+import { FaTrash, FaArrowUp, FaArrowDown, FaStar, FaEye, FaSearch } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { Toast, TALLES } from "../constants/constants";
 import ImageCropper from "../components/ImageCropper";
@@ -328,7 +328,7 @@ const AdminPanel = () => {
 
   if (loading)
     return (
-      <div className="pt-40 text-center font-serif italic text-gray-400">
+      <div className="pt-52 text-center font-serif italic text-gray-400">
         Cargando catálogo...
       </div>
     );
@@ -347,7 +347,7 @@ const AdminPanel = () => {
   });
 
   return (
-    <div className="pt-40 px-6 max-w-6xl mx-auto mb-20 font-sans">
+    <div className="pt-52 px-6 max-w-6xl mx-auto mb-20 font-sans">
       {/* Image Cropper Modal */}
       {cropQueue.length > 0 && (
         <ImageCropper 
@@ -379,13 +379,16 @@ const AdminPanel = () => {
           Panel de Control
         </h2>
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <input
-            type="text"
-            placeholder="Buscar por nombre..."
-            className="p-2 border text-xs focus:outline-none focus:border-black flex-grow md:w-64"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="relative flex-grow md:w-64">
+            <input
+              type="text"
+              placeholder="Buscar por nombre..."
+              className="p-2 pl-8 border text-xs focus:outline-none focus:border-black w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <FaSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+          </div>
           <select
             className="p-2 border text-xs focus:outline-none focus:border-black"
             value={categoryFilter}
@@ -395,6 +398,7 @@ const AdminPanel = () => {
             <option value="TEXANAS">TEXANAS</option>
             <option value="BOTAS">BOTAS</option>
             <option value="BORCEGOS">BORCEGOS</option>
+            <option value="MOCASINES">MOCASINES</option>
             <option value="DISCONTINUOS">DISCONTINUOS</option>
           </select>
           <span className="text-[10px] font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
@@ -451,6 +455,7 @@ const AdminPanel = () => {
             <option value="TEXANAS">TEXANAS</option>
             <option value="BOTAS">BOTAS</option>
             <option value="BORCEGOS">BORCEGOS</option>
+            <option value="MOCASINES">MOCASINES</option>
             <option value="DISCONTINUOS">DISCONTINUOS</option>
           </select>
         </div>
@@ -727,6 +732,7 @@ const AdminPanel = () => {
                         <option value="TEXANAS">TEXANAS</option>
                         <option value="BOTAS">BOTAS</option>
                         <option value="BORCEGOS">BORCEGOS</option>
+                        <option value="MOCASINES">MOCASINES</option>
                         <option value="DISCONTINUOS">DISCONTINUOS</option>
                       </select>
                     </div>

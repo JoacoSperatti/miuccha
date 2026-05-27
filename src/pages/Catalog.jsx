@@ -29,7 +29,7 @@ const CatalogPage = ({ onAddToCart, onOpenSizeGuide }) => {
     fetchProducts();
   }, [categoryFilter]);
 
-  const cats = ["TODO", "TEXANAS", "BOTAS", "BORCEGOS", "DISCONTINUOS"];
+  const cats = ["TODO", "TEXANAS", "BOTAS", "BORCEGOS", "MOCASINES", "DISCONTINUOS"];
 
   return (
     <div className="pt-40 min-h-screen max-w-7xl mx-auto px-6 font-sans">

@@ -18,9 +18,9 @@ const CategoryGrid = () => {
     },
     {
       id: 4,
-      name: "DISCONTINUOS",
-      img: "/discontinuos.jpg",
-      link: "/catalogo?cat=DISCONTINUOS",
+      name: "MOCASINES",
+      img: "/mocasines.jpeg",
+      link: "/catalogo?cat=MOCASINES",
     },
   ];
   return (
