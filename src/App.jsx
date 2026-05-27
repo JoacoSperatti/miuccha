@@ -14,6 +14,7 @@ import Home from "./pages/Home";
 import CatalogPage from "./pages/Catalog";
 import AdminPanel from "./pages/Admin";
 import PolicyPage from "./pages/Policies";
+import ProductPage from "./pages/ProductPage";
 
 export default function App() {
   const [cart, setCart] = useState([]);
@@ -60,6 +61,15 @@ export default function App() {
               path="/catalogo"
               element={
                 <CatalogPage
+                  onAddToCart={addToCart}
+                  onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
+                />
+              }
+            />
+            <Route
+              path="/producto/:id"
+              element={
+                <ProductPage
                   onAddToCart={addToCart}
                   onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
                 />

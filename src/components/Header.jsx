@@ -13,7 +13,7 @@ const Header = ({ cartCount, onCartClick }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogoClick = (e) => {
+  const handleLogoClick = () => {
     if (location.pathname === "/") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
