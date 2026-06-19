@@ -4,12 +4,13 @@ import {
   collection,
   getDocs,
   doc,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { FaTrash, FaArrowUp, FaArrowDown, FaStar, FaEye, FaSearch } from "react-icons/fa";
+import { FaTrash, FaArrowUp, FaArrowDown, FaStar, FaEye, FaSearch, FaUsers, FaChartLine, FaFire } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { Toast, TALLES } from "../constants/constants";
 import ImageCropper from "../components/ImageCropper";
@@ -26,6 +27,7 @@ const AdminPanel = () => {
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [showPreview, setShowPreview] = useState(null);
+  const [totalVisits, setTotalVisits] = useState(0);
   
   // Cropping state
   const [cropQueue, setCropQueue] = useState([]);
@@ -45,10 +47,30 @@ const AdminPanel = () => {
   });
 
   const fetchProducts = async () => {
-    setLoading(true);
     const snap = await getDocs(collection(db, "productos"));
     setProducts(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    setLoading(false);
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const docSnap = await getDoc(doc(db, "analytics", "general"));
+      if (docSnap.exists()) {
+        setTotalVisits(docSnap.data().visitCount || 0);
+      }
+    } catch (e) {
+      console.error("Error fetching analytics:", e);
+    }
+  };
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([fetchProducts(), fetchAnalytics()]);
+    } catch (e) {
+      console.error("Error loading panel data:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdate = async (id) => {
@@ -71,7 +93,7 @@ const AdminPanel = () => {
 
       setEditingId(null);
       setEditingData(null);
-      fetchProducts();
+      fetchAllData();
       Toast.fire({ icon: "success", title: "Producto actualizado" });
     } catch (e) {
       console.error(e);
@@ -100,7 +122,7 @@ const AdminPanel = () => {
     e.preventDefault();
     if (passwordInput === import.meta.env.VITE_ADMIN_PASSWORD) {
       setAuthorized(true);
-      fetchProducts();
+      fetchAllData();
       Toast.fire({ icon: "success", title: "Acceso concedido" });
     } else {
       Swal.fire({
@@ -252,7 +274,7 @@ const AdminPanel = () => {
         fotosPorColor: {},
         descripcionesPorColor: {},
       });
-      fetchProducts();
+      fetchAllData();
     } catch (e) {
       console.error(e);
       Swal.fire({
@@ -277,7 +299,7 @@ const AdminPanel = () => {
 
     if (result.isConfirmed) {
       await deleteDoc(doc(db, "productos", id));
-      fetchProducts();
+      fetchAllData();
       Swal.fire({
         title: "¡Borrado!",
         text: "El producto ha sido eliminado.",
@@ -404,6 +426,128 @@ const AdminPanel = () => {
           <span className="text-[10px] font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
             En Línea
           </span>
+        </div>
+      </div>
+
+      {/* Sección de Estadísticas y Analíticas */}
+      <div className="mb-16 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6 flex flex-col justify-between">
+          <div>
+            <h3 className="font-serif text-2xl italic mb-6">Estadísticas de la Tienda</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Card 1: Visitas */}
+              <div className="bg-white p-5 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-gray-400 block mb-1">
+                    Visitas Totales
+                  </span>
+                  <span className="font-serif text-3xl text-black font-semibold">
+                    {totalVisits.toLocaleString()}
+                  </span>
+                  <p className="text-[10px] text-gray-400 mt-1">Sesiones únicas creadas</p>
+                </div>
+                <div className="p-3 rounded-full bg-gray-50 text-black">
+                  <FaUsers size={18} />
+                </div>
+              </div>
+
+              {/* Card 2: Productos */}
+              <div className="bg-white p-5 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-gray-400 block mb-1">
+                    Modelos Activos
+                  </span>
+                  <span className="font-serif text-3xl text-black font-semibold">
+                    {products.length}
+                  </span>
+                  <p className="text-[10px] text-gray-400 mt-1">Productos en catálogo</p>
+                </div>
+                <div className="p-3 rounded-full bg-gray-50 text-black">
+                  <FaChartLine size={18} />
+                </div>
+              </div>
+
+              {/* Card 3: Visualizaciones Totales */}
+              <div className="bg-white p-5 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-gray-400 block mb-1">
+                    Vistas de Productos
+                  </span>
+                  <span className="font-serif text-3xl text-black font-semibold">
+                    {products.reduce((acc, p) => acc + (p.views || 0), 0).toLocaleString()}
+                  </span>
+                  <p className="text-[10px] text-gray-400 mt-1">Visualizaciones de detalles</p>
+                </div>
+                <div className="p-3 rounded-full bg-gray-50 text-black">
+                  <FaEye size={18} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Productos Más Vistos */}
+        <div className="bg-white p-5 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center gap-2 mb-4 border-b pb-2">
+            <FaFire className="text-orange-500 animate-pulse" />
+            <h4 className="font-serif text-lg italic">Productos Más Vistos</h4>
+          </div>
+
+          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+            {[...products]
+              .sort((a, b) => (b.views || 0) - (a.views || 0))
+              .map((p, index) => {
+                const views = p.views || 0;
+                const maxViews = Math.max(...products.map(x => x.views || 0), 1);
+                const percentage = Math.min(100, Math.round((views / maxViews) * 100));
+                const firstImg = Object.values(p.fotosPorColor || {}).flat()[0];
+
+                return (
+                  <div key={p.id} className="flex items-center gap-3">
+                    <span className="font-serif text-sm text-gray-400 w-5 text-center font-bold">
+                      #{index + 1}
+                    </span>
+                    
+                    <div className="w-8 h-10 bg-gray-50 border rounded overflow-hidden flex-shrink-0">
+                      {firstImg ? (
+                        <img src={firstImg} alt={p.nombre} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[6px] text-gray-400 uppercase font-bold">
+                          Sin foto
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-grow min-w-0">
+                      <div className="flex justify-between items-baseline mb-0.5">
+                        <h5 className="font-bold text-xs text-gray-900 truncate">
+                          {p.nombre}
+                        </h5>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">
+                          {views} {views === 1 ? 'vista' : 'vistas'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8px] uppercase tracking-wider text-gray-400">
+                          {p.categoria}
+                        </span>
+                        <div className="flex-grow h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-black h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            {products.length === 0 && (
+              <p className="text-gray-400 italic text-center py-4 text-xs font-serif">
+                No hay productos para mostrar estadísticas.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -701,6 +845,12 @@ const AdminPanel = () => {
                       <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Sin imágenes</span>
                     </div>
                   )}
+                </div>
+                
+                {/* Visualizaciones badge */}
+                <div className="text-center text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center justify-center gap-1.5 border border-gray-100 py-2 rounded-lg bg-gray-50/50">
+                  <FaEye size={12} className="text-gray-400" />
+                  <span>{data.views || 0} {(data.views || 0) === 1 ? 'Vista' : 'Vistas'}</span>
                 </div>
               </div>
 

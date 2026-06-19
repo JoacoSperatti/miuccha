@@ -1,6 +1,9 @@
-import { useState } from "react";
+/* global __COMING_SOON__ */
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { FaWhatsapp } from "react-icons/fa";
+import { doc, setDoc, increment } from "firebase/firestore";
+import { db } from "./firebase/config";
 
 // Components
 import Header from "./components/Header";
@@ -8,6 +11,7 @@ import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
 import SizeGuide from "./components/SizeGuide";
 import ScrollToTop from "./components/ScrollToTop";
+import ComingSoon from "./components/ComingSoon";
 
 // Pages
 import Home from "./pages/Home";
@@ -17,9 +21,35 @@ import PolicyPage from "./pages/Policies";
 import ProductPage from "./pages/ProductPage";
 
 export default function App() {
+  const isComingSoon = typeof __COMING_SOON__ !== "undefined" && __COMING_SOON__;
+
+  if (isComingSoon) {
+    return <ComingSoon />;
+  }
+
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+
+
+  useEffect(() => {
+    const trackVisit = async () => {
+      try {
+        const hasVisited = sessionStorage.getItem("miuccha_visited");
+        if (!hasVisited) {
+          sessionStorage.setItem("miuccha_visited", "true");
+          await setDoc(
+            doc(db, "analytics", "general"),
+            { visitCount: increment(1) },
+            { merge: true }
+          );
+        }
+      } catch (error) {
+        console.error("Error tracking visit:", error);
+      }
+    };
+    trackVisit();
+  }, []);
 
   const addToCart = (p) => {
     setCart([...cart, p]);

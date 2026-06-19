@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
 import { db } from "../firebase/config";
 import ProductDetailView from "../components/ProductDetailView";
 import { FiArrowLeft } from "react-icons/fi";
@@ -20,6 +20,19 @@ const ProductPage = ({ onAddToCart, onOpenSizeGuide }) => {
         
         if (docSnap.exists()) {
           setProduct({ id: docSnap.id, ...docSnap.data() });
+          
+          // Track view count
+          try {
+            const viewedSessionKey = `viewed_prod_${id}`;
+            if (!sessionStorage.getItem(viewedSessionKey)) {
+              sessionStorage.setItem(viewedSessionKey, "true");
+              await updateDoc(docRef, {
+                views: increment(1)
+              });
+            }
+          } catch (err) {
+            console.error("Error updating view count:", err);
+          }
         } else {
           setError(true);
         }
